@@ -23,13 +23,21 @@ describe( 'passive network', () => {
 	];
 
 	const clients = clientAddresses.map( address => {
-		const addr = address.split( '/' ).slice( 0, 5 ).join( '/' );
-		return { address: addr };
+		return {
+			address: address.split( '/' ).slice( 0, 5 ).join( '/' )
+		};
 	} );
 
 	it( 'can be created', done => {
 		network = new Network();
 		network.once( 'listening', ( options ) => {
+			if ( options.host === "0.0.0.0" ) {
+				// simulated network was configured to listen on any (local) IP
+				// -> can't connect to "any IP"
+				// -> use loopback IP 127.0.0.1 instead
+				options.host = "127.0.0.1";
+			}
+
 			clientOptions = options;
 			done();
 		} );
