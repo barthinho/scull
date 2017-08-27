@@ -9,7 +9,6 @@ const expect = require( 'code' ).expect;
 
 const async = require( 'async' );
 const memdown = require( 'memdown' );
-const leftpad = require( 'left-pad' );
 
 const Node = require( '../' );
 
@@ -51,18 +50,17 @@ describe( 'log replication', () => {
 	} );
 
 	it( 'follower accepts command', done => {
-		const commands = [];
+		const commands = new Array( 20 );
 		for ( let i = 0; i < 20; i++ ) {
-			commands.push( {
+			commands[i] = {
 				type: 'put',
-				key: leftpad( i.toString(), 3, '0' ),
+				key: ( "00" + i ).slice( -3 ),
 				value: i
-			} );
+			};
 		}
+
 		async.eachSeries( commands, ( command, cb ) => {
-			const index = command.value % followers.length;
-			const follower = followers[index];
-			follower.command( command, cb );
+			followers[command.value % followers.length].command( command, cb );
 		}, done );
 	} );
 
@@ -71,7 +69,7 @@ describe( 'log replication', () => {
 		let next = 0;
 		db.createReadStream()
 			.on( 'data', entry => {
-				expect( entry.key ).to.equal( leftpad( next.toString(), 3, '0' ) );
+				expect( entry.key ).to.equal( ( "00" + next ).slice( -3 ) );
 				expect( entry.value ).to.equal( next );
 				next++;
 			} )
@@ -96,7 +94,7 @@ describe( 'log replication', () => {
 		let next = 0;
 		db.createReadStream()
 			.on( 'data', entry => {
-				expect( entry.key ).to.equal( leftpad( next.toString(), 3, '0' ) );
+				expect( entry.key ).to.equal( ( "00" + next ).slice( -3 ) );
 				expect( entry.value ).to.equal( next );
 				next++;
 			} )

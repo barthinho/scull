@@ -9,7 +9,6 @@ const expect = require( 'code' ).expect;
 
 const async = require( 'async' );
 const Memdown = require( 'memdown' );
-const leftPad = require( 'left-pad' );
 
 const Node = require( '../' );
 
@@ -53,7 +52,7 @@ describe( 'log compaction', () => {
 	it( 'can insert 30 items', { timeout: 10000 }, done => {
 		const items = [];
 		for ( let i = 0; i < 30; i++ ) {
-			items.push( leftPad( i.toString(), 3, '0' ) );
+			items.push( ( "00" + i ).slice( -3 ) );
 		}
 		async.each( items, ( item, cb ) => {
 				leveldown.put( item, item, cb );
@@ -92,8 +91,7 @@ describe( 'log compaction', () => {
 			let nextEntry = 0;
 			newNode._db.state.createReadStream()
 				.on( 'data', ( entry ) => {
-					const expectedKey = leftPad( nextEntry, 3, '0' );
-					expect( entry.key ).to.equal( expectedKey );
+					expect( entry.key ).to.equal( ( "00" + nextEntry ).slice( -3 ) );
 					nextEntry++;
 				} )
 				.once( 'end', () => {
@@ -108,7 +106,7 @@ describe( 'log compaction', () => {
 
 			const items = [];
 			for ( let i = 30; i < 60; i++ ) {
-				items.push( leftPad( i.toString(), 3, '0' ) );
+				items.push( ( "00" + i ).slice( -3 ) );
 			}
 			async.each( items, ( item, cb ) => {
 					leveldown.put( item, item, cb );
@@ -122,8 +120,7 @@ describe( 'log compaction', () => {
 			let nextEntry = 0;
 			newNode._db.state.createReadStream()
 				.on( 'data', ( entry ) => {
-					const expectedKey = leftPad( nextEntry, 3, '0' );
-					expect( entry.key ).to.equal( expectedKey );
+					expect( entry.key ).to.equal( ( "00" + nextEntry ).slice( -3 ) );
 					nextEntry++;
 				} )
 				.once( 'end', () => {

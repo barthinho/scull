@@ -9,7 +9,6 @@ const expect = require( 'code' ).expect;
 
 const async = require( 'async' );
 const Memdown = require( 'memdown' );
-const leftPad = require( 'left-pad' );
 
 const Node = require( '../' );
 
@@ -50,7 +49,7 @@ describe( 'persistence', () => {
 	before( { timeout: 10000 }, done => {
 		items = [];
 		for ( let i = 0; i < 30; i++ ) {
-			items.push( leftPad( i.toString(), 3, '0' ) );
+			items.push( ( "00" + i ).slice( -3 ) );
 		}
 		async.each( items, ( item, cb ) => {
 				leveldown.put( item, item, cb );
