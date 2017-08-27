@@ -152,7 +152,7 @@ Creates a network you can share amongst several Skiff nodes in the same process.
 Options:
 
 * `active` (object):
-  * `innactivityTimeout` (integer, miliseconds, defaults to `5000`): The amount of time to wait before a client connection is closed because of innactivity.
+  * `inactivityTimeout` (integer, miliseconds, defaults to `5000`): The amount of time to wait before a client connection is closed because of inactivity.
 * `passive` (object):
   * `server` (object):
     * `port` (integer, defaults to `9163`): the port the server should listen on
