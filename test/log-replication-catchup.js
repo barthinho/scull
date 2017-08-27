@@ -26,7 +26,7 @@ describe( 'log replication catchup', () => {
 	const newAddress = '/ip4/127.0.0.1/tcp/9293';
 
 	before( done => {
-		nodes = nodeAddresses.map( ( address, index ) =>
+		nodes = nodeAddresses.map( ( address ) =>
 			Node( address, {
 				db: memdown,
 				peers: nodeAddresses.filter( addr => addr !== address )

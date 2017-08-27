@@ -1,11 +1,8 @@
 'use strict';
 
 const http = require( 'http' );
-const timers = require( 'timers' );
 const async = require( 'async' );
 const Memdown = require( 'memdown' );
-const Leveldown = require( 'leveldown' );
-const Multiaddr = require( 'multiaddr' );
 const join = require( 'path' ).join;
 const Node = require( '../../../' );
 

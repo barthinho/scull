@@ -23,7 +23,7 @@ describe( 'log replication', () => {
 	];
 
 	before( done => {
-		nodes = nodeAddresses.map( ( address, index ) =>
+		nodes = nodeAddresses.map( ( address ) =>
 			Node( address, {
 				db: memdown,
 				peers: nodeAddresses.filter( addr => addr !== address )

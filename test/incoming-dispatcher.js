@@ -21,7 +21,7 @@ describe( 'incoming dispatcher', () => {
 	} );
 
 	it( 'accepts new objects', done => {
-		for ( var i = 0; i < 10; i++ ) {
+		for ( let i = 0; i < 10; i++ ) {
 			dispatcher.write( i );
 		}
 		done();
@@ -39,7 +39,9 @@ describe( 'incoming dispatcher', () => {
 	} );
 
 	it( 'should cap', done => {
-		for ( var i = 0; i < 20; i++ ) {
+		let i;
+
+		for ( i = 0; i < 20; i++ ) {
 			dispatcher.write( i );
 		}
 

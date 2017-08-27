@@ -49,7 +49,7 @@ describe( 'persistence', () => {
 
 	before( { timeout: 10000 }, done => {
 		items = [];
-		for ( var i = 0; i < 30; i++ ) {
+		for ( let i = 0; i < 30; i++ ) {
 			items.push( leftPad( i.toString(), 3, '0' ) );
 		}
 		async.each( items, ( item, cb ) => {

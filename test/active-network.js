@@ -43,7 +43,6 @@ describe( 'active network', () => {
 	} );
 
 	before( done => {
-		let listening = 0;
 		let lindex = -1;
 
 		async.mapSeries( serverAddresses, ( addr, cb ) => {

@@ -5,7 +5,6 @@ const describe = lab.experiment;
 const before = lab.before;
 const after = lab.after;
 const it = lab.it;
-const expect = require( 'code' ).expect;
 
 const timers = require( 'timers' );
 

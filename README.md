@@ -20,7 +20,7 @@ $ npm install skiff --save
 ## Usage
 
 ```javascript
-const Skiff = require('skiff')
+const Skiff = require('skiff');
 
 const options = {
   db: require('memdown'), // in memory database
@@ -28,21 +28,21 @@ const options = {
     '/ip4/127.0.0.1/tcp/9491',
     '/ip4/127.0.0.1/tcp/9492'
   ]
-}
-const skiff = Skiff('/ip4/127.0.0.1/tcp/9490', options)
+};
+const skiff = Skiff('/ip4/127.0.0.1/tcp/9490', options);
 
 // expose the cluster as a Levelup-compatible database
-const db = skiff.levelup()
+const db = skiff.levelup();
 
 skiff.start(err => {
   if (err) {
     console.error('Error starting skiff node: ', err.message)
   } else {
-    console.log('Skiff node started')
+    console.log('Skiff node started');
 
     db.put('key', 'value', (err) => {
       // ...
-    })
+    });
   }
 })
 ```

@@ -23,7 +23,7 @@ describe( 'levelup', () => {
 	];
 
 	before( done => {
-		nodes = nodeAddresses.map( ( address, index ) =>
+		nodes = nodeAddresses.map( ( address ) =>
 			Node( address, {
 				db: Memdown,
 				peers: nodeAddresses.filter( addr => addr !== address )
@@ -123,7 +123,6 @@ describe( 'levelup', () => {
 		} );
 
 		it( 'can iterate through all the keys', done => {
-			let stopped = false;
 			const expecteds = [
 				{ key: 'key a', value: 'value a' },
 				{ key: 'key d', value: 'value d' },

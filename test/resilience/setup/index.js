@@ -2,7 +2,6 @@
 
 const async = require( 'async' );
 const timers = require( 'timers' );
-const fork = require( 'child_process' ).fork;
 const path = require( 'path' );
 const rimraf = require( 'rimraf' );
 const mkdirp = require( 'mkdirp' );
@@ -44,7 +43,7 @@ function Setup( _options ) {
 
 	function createNodes( done ) {
 		const ports = [];
-		for ( var i = 0; i < options.nodeCount; i++ ) {
+		for ( let i = 0; i < options.nodeCount; i++ ) {
 			ports.push( 5300 + i * 2 );
 		}
 
@@ -71,7 +70,7 @@ function Setup( _options ) {
 					} else {
 						startKiller();
 					}
-				} )
+				} );
 			}, options.killerIntervalMS );
 		}
 

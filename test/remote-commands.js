@@ -24,7 +24,7 @@ describe( 'log replication', () => {
 	];
 
 	before( done => {
-		nodes = nodeAddresses.map( ( address, index ) =>
+		nodes = nodeAddresses.map( ( address ) =>
 			Node( address, {
 				db: memdown,
 				peers: nodeAddresses.filter( addr => addr !== address )
@@ -52,7 +52,7 @@ describe( 'log replication', () => {
 
 	it( 'follower accepts command', done => {
 		const commands = [];
-		for ( var i = 0; i < 20; i++ ) {
+		for ( let i = 0; i < 20; i++ ) {
 			commands.push( {
 				type: 'put',
 				key: leftpad( i.toString(), 3, '0' ),

@@ -25,7 +25,7 @@ describe( 'log compaction', () => {
 	const newNodeAddress = '/ip4/127.0.0.1/tcp/9493';
 
 	before( done => {
-		nodes = nodeAddresses.map( ( address, index ) =>
+		nodes = nodeAddresses.map( ( address ) =>
 			Node( address, {
 				db: Memdown,
 				minLogRetention: 10,
@@ -52,7 +52,7 @@ describe( 'log compaction', () => {
 
 	it( 'can insert 30 items', { timeout: 10000 }, done => {
 		const items = [];
-		for ( var i = 0; i < 30; i++ ) {
+		for ( let i = 0; i < 30; i++ ) {
 			items.push( leftPad( i.toString(), 3, '0' ) );
 		}
 		async.each( items, ( item, cb ) => {
@@ -107,7 +107,7 @@ describe( 'log compaction', () => {
 			leveldown = leader.leveldown();
 
 			const items = [];
-			for ( var i = 30; i < 60; i++ ) {
+			for ( let i = 30; i < 60; i++ ) {
 				items.push( leftPad( i.toString(), 3, '0' ) );
 			}
 			async.each( items, ( item, cb ) => {
