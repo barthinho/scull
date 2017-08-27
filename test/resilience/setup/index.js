@@ -1,7 +1,6 @@
 'use strict';
 
 const async = require( 'async' );
-const timers = require( 'timers' );
 const path = require( 'path' );
 const rimraf = require( 'rimraf' );
 const mkdirp = require( 'mkdirp' );
@@ -63,7 +62,7 @@ function Setup( _options ) {
 
 	function startKiller( done ) {
 		if ( options.chaos ) {
-			killer = timers.setTimeout( () => {
+			killer = setTimeout( () => {
 				killAndRevive( err => {
 					if ( err ) {
 						throw err;
@@ -124,7 +123,7 @@ function Setup( _options ) {
 	}
 
 	function stopKiller( done ) {
-		timers.clearInterval( killer );
+		clearInterval( killer );
 		done();
 	}
 

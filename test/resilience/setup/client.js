@@ -4,7 +4,6 @@
 const keys = ['a'];
 const Multiaddr = require( 'multiaddr' );
 const Wreck = require( 'wreck' );
-const timers = require( 'timers' );
 const once = require( 'once' );
 const EventEmitter = require( 'events' );
 
@@ -39,7 +38,7 @@ function Client( nodes, _options ) {
 
 	return function client( _done ) {
 		const done = once( callback );
-		timeout = timers.setTimeout( done, options.duration );
+		timeout = setTimeout( done, options.duration );
 		work( done );
 		return emitter;
 
@@ -146,7 +145,7 @@ function Client( nodes, _options ) {
 			if ( err ) {
 				if ( err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET' || err.code === 'ETIMEOUT' ) {
 					leader = null;
-					timers.setTimeout( retry, 100 );
+					setTimeout( retry, 100 );
 				} else {
 					done( err );
 				}
@@ -164,9 +163,9 @@ function Client( nodes, _options ) {
 						} else {
 							leader = undefined;
 						}
-						timers.setImmediate( retry );
+						setImmediate( retry );
 					} else if ( error.code === 'ETIMEOUT' ) {
-						timers.setImmediate( retry );
+						setImmediate( retry );
 					} else {
 						done( new Error( `response status code was ${res.statusCode}, response: ${payload}` ) );
 					}

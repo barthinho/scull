@@ -9,7 +9,6 @@ const expect = require( 'code' ).expect;
 const async = require( 'async' );
 const Address = require( '../lib/address' );
 const net = require( 'net' );
-const timers = require( 'timers' );
 const Msgpack = require( 'msgpack5' );
 
 const Network = require( '../lib/network/active' );
@@ -105,7 +104,7 @@ describe( 'active network', () => {
 	} );
 
 	it( 'waits a bit', done => {
-		timers.setTimeout( done, A_BIT );
+		setTimeout( done, A_BIT );
 	} );
 
 	it( 'allows peer to disconnect', done => {
@@ -134,7 +133,7 @@ describe( 'active network', () => {
 	} );
 
 	it( 'waits a bit', done => {
-		timers.setTimeout( done, A_BIT );
+		setTimeout( done, A_BIT );
 	} );
 
 	it( 'can still send data to another peer 2', done => {
@@ -191,7 +190,7 @@ describe( 'active network', () => {
 	} );
 
 	it( 'waits a bit', done => {
-		timers.setTimeout( done, A_BIT );
+		setTimeout( done, A_BIT );
 	} );
 
 	it( 'catches errors', done => {
@@ -220,7 +219,7 @@ describe( 'active network', () => {
 	} );
 
 	it( 'waits a bit', done => {
-		timers.setTimeout( done, A_BIT );
+		setTimeout( done, A_BIT );
 	} );
 
 	it( 'can get closed', done => {

@@ -6,8 +6,6 @@ const before = lab.before;
 const after = lab.after;
 const it = lab.it;
 
-const timers = require( 'timers' );
-
 const Setup = require( './setup' );
 const Client = require( './setup/client' );
 
@@ -20,7 +18,7 @@ describe( 'resilience, chaos, in memory', () => {
 		let timeout;
 		const client = Client( setup.addresses, { duration: 120000 } );
 		const emitter = client( ( err ) => {
-			timers.clearTimeout( timeout );
+			clearTimeout( timeout );
 			console.log( 'stats: %j', emitter.stats );
 			done( err );
 		} );
@@ -33,9 +31,9 @@ describe( 'resilience, chaos, in memory', () => {
 
 		function resetOperationTimeout() {
 			if ( timeout ) {
-				timers.clearTimeout( timeout );
+				clearTimeout( timeout );
 			}
-			timeout = timers.setTimeout( onOperationTimeout, 11000 );
+			timeout = setTimeout( onOperationTimeout, 11000 );
 		}
 	} );
 } );
