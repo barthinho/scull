@@ -72,7 +72,7 @@ Arguments:
   }
   ```
 
-  * `location` (string): Location of the base directory for the leveldb files. Defaults to the `data` directory on the root of this package (not recommended)
+  * `location` (string): Location of the base directory for the leveldb files. Defaults to the default folder of current operating system for temporary files.
   * `db` (function, defaults to [Leveldown](https://github.com/Level/leveldown#readme) implementation): Database constructor, should return a [Leveldown](https://github.com/Level/leveldown#readme) implementation.
 
  > (You can use this to create a in-memory database using [Memdown](https://github.com/Level/memdown#readme))
