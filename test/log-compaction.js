@@ -76,7 +76,7 @@ describe( 'log compaction', () => {
 			async.each( nodes.concat( newNode ), ( node, cb ) => node.stop( cb ), done );
 		} );
 
-		it( 'waits for consensus of late node', { timeout: 5000 }, done => nodes.find( node => node.is( "leader" ) ).waitFor( newNode.id, done ) );
+		it( 'waits for consensus of late node', { timeout: 5000 }, done => leader.waitFor( newNodeAddress, done ) );
 
 		it( 'catches up', done => {
 			let nextEntry = 0;
