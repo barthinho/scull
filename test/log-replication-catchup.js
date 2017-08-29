@@ -34,15 +34,12 @@ describe( 'log replication catchup', () => {
 		done();
 	} );
 
-	before( done => {
-		async.each( nodes, ( node, cb ) => node.start( cb ), done );
-	} );
+	// start nodes and wait for cluster settling
+	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( "elected", cb ) ), done ) );
 
 	after( done => {
 		async.each( nodes.concat( newNode ), ( node, cb ) => node.stop( cb ), done );
 	} );
-
-	before( { timeout: 5000 }, done => setTimeout( done, A_BIT ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
@@ -65,7 +62,7 @@ describe( 'log replication catchup', () => {
 		value: '2'
 	}, done ) );
 
-	before( { timeout: 5000 }, done => setTimeout( done, A_BIT ) );
+	before( { timeout: 5000 }, done => leader.waitFor( nodeAddresses, done ) );
 
 	before( done => {
 		newNode = Node( newAddress, {
@@ -83,7 +80,7 @@ describe( 'log replication catchup', () => {
 		leader.join( newAddress, done );
 	} );
 
-	before( { timeout: 5000 }, done => setTimeout( done, A_BIT ) );
+	before( { timeout: 5000 }, done => leader.waitFor( nodeAddresses.concat( newAddress ), done ) );
 
 	it( 'new node gets updated', done => {
 		const db = newNode._db.db;

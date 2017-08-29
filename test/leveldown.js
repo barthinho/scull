@@ -12,8 +12,6 @@ const Memdown = require( 'memdown' );
 
 const Node = require( '../' );
 
-const A_BIT = 4000;
-
 describe( 'leveldown', () => {
 	let nodes, follower, leader, leveldown;
 	const nodeAddresses = [
@@ -31,15 +29,12 @@ describe( 'leveldown', () => {
 		done();
 	} );
 
-	before( done => {
-		async.each( nodes, ( node, cb ) => node.start( cb ), done );
-	} );
+	// start nodes and wait for cluster settling
+	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( "elected", cb ) ), done ) );
 
 	after( done => {
 		async.each( nodes, ( node, cb ) => node.stop( cb ), done );
 	} );
-
-	before( { timeout: 5000 }, done => setTimeout( done, A_BIT ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );

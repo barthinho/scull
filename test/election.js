@@ -12,8 +12,6 @@ const memdown = require( 'memdown' );
 
 const Node = require( '../' );
 
-const A_BIT = 4000;
-
 describe( 'election', () => {
 	let nodes, followers, leader;
 
@@ -39,7 +37,7 @@ describe( 'election', () => {
 		async.each( nodes, ( node, cb ) => node.stop( cb ), done );
 	} );
 
-	it( 'waits a bit', { timeout: 5000 }, done => setTimeout( done, A_BIT ) );
+	it( 'waits for end of election', { timeout: 5000 }, done => async.each( nodes, ( node, cb ) => node.once( "elected", cb ), done ) );
 
 	it( 'one of the nodes gets elected', done => {
 		leader = nodes.find( node => node.is( 'leader' ) );

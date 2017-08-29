@@ -12,8 +12,6 @@ const Memdown = require( 'memdown' );
 
 const Node = require( '../' );
 
-const A_BIT = 4000;
-
 describe( 'persistence', () => {
 
 	let nodes, leader, leveldown, term, items;
@@ -24,19 +22,15 @@ describe( 'persistence', () => {
 	];
 
 	before( done => {
-		nodes = nodeAddresses.map( ( address ) =>
-			Node( address, {
-				db: Memdown,
-				peers: nodeAddresses.filter( addr => addr !== address )
-			} ) );
+		nodes = nodeAddresses.map( address => Node( address, {
+			db: Memdown,
+			peers: nodeAddresses.filter( addr => addr !== address )
+		} ) );
 		done();
 	} );
 
-	before( done => {
-		async.each( nodes, ( node, cb ) => node.start( cb ), done );
-	} );
-
-	before( { timeout: 5000 }, done => setTimeout( done, A_BIT ) );
+	// start nodes and wait for cluster settling
+	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( "elected", cb ) ), done ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
@@ -56,8 +50,6 @@ describe( 'persistence', () => {
 			},
 			done );
 	} );
-
-	before( { timeout: 5000 }, done => setTimeout( done, A_BIT ) );
 
 	before( { timeout: 4000 }, done => async.each( nodes, ( node, cb ) => node.stop( cb ), done ) );
 

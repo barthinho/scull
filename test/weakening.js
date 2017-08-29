@@ -12,8 +12,6 @@ const memdown = require( 'memdown' );
 
 const Node = require( '../' );
 
-const A_BIT = 4000;
-
 describe( 'log replication', () => {
 	let nodes, followers, leader, preferred, weakened;
 	const nodeAddresses = [
@@ -31,15 +29,12 @@ describe( 'log replication', () => {
 		done();
 	} );
 
-	before( done => {
-		async.each( nodes, ( node, cb ) => node.start( cb ), done );
-	} );
+	// start nodes and wait for cluster settling
+	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( "elected", cb ) ), done ) );
 
 	after( done => {
 		async.each( nodes, ( node, cb ) => node.stop( cb ), done );
 	} );
-
-	before( { timeout: 5000 }, done => setTimeout( done, A_BIT ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
@@ -56,9 +51,9 @@ describe( 'log replication', () => {
 		done();
 	} );
 
-	it( 'waits a bit', { timeout: 5000 }, done => setTimeout( done, A_BIT ) );
+	it( 'settles again', { timeout: 5000 }, done => preferred.once( "elected", done ) );
 
-	it( 'resulted in ellecting the preferred', done => {
+	it( 'resulted in electing the preferred', done => {
 		expect( preferred.is( 'leader' ) ).to.be.true();
 		expect( weakened.every( w => w.is( 'follower' ) ) ).to.be.true();
 		done();
