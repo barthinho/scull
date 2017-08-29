@@ -30,7 +30,7 @@ describe( 'persistence', () => {
 	} );
 
 	// start nodes and wait for cluster settling
-	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( "elected", cb ) ), done ) );
+	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
@@ -43,12 +43,9 @@ describe( 'persistence', () => {
 	before( { timeout: 10000 }, done => {
 		items = [];
 		for ( let i = 0; i < 30; i++ ) {
-			items.push( ( "00" + i ).slice( -3 ) );
+			items.push( ( '00' + i ).slice( -3 ) );
 		}
-		async.each( items, ( item, cb ) => {
-				leveldown.put( item, item, cb );
-			},
-			done );
+		async.each( items, ( item, cb ) => { leveldown.put( item, item, cb ); }, done );
 	} );
 
 	before( { timeout: 4000 }, done => async.each( nodes, ( node, cb ) => node.stop( cb ), done ) );

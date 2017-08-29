@@ -30,7 +30,7 @@ describe( 'log replication', () => {
 	} );
 
 	// start nodes and wait for cluster settling
-	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( "elected", cb ) ), done ) );
+	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
 
 	after( done => {
 		async.each( nodes, ( node, cb ) => node.stop( cb ), done );
@@ -49,7 +49,7 @@ describe( 'log replication', () => {
 		for ( let i = 0; i < 20; i++ ) {
 			commands[i] = {
 				type: 'put',
-				key: ( "00" + i ).slice( -3 ),
+				key: ( '00' + i ).slice( -3 ),
 				value: i
 			};
 		}
@@ -64,7 +64,7 @@ describe( 'log replication', () => {
 		let next = 0;
 		db.createReadStream()
 			.on( 'data', entry => {
-				expect( entry.key ).to.equal( ( "00" + next ).slice( -3 ) );
+				expect( entry.key ).to.equal( ( '00' + next ).slice( -3 ) );
 				expect( entry.value ).to.equal( next );
 				next++;
 			} )
@@ -89,7 +89,7 @@ describe( 'log replication', () => {
 		let next = 0;
 		db.createReadStream()
 			.on( 'data', entry => {
-				expect( entry.key ).to.equal( ( "00" + next ).slice( -3 ) );
+				expect( entry.key ).to.equal( ( '00' + next ).slice( -3 ) );
 				expect( entry.value ).to.equal( next );
 				next++;
 			} )

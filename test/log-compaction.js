@@ -32,7 +32,7 @@ describe( 'log compaction', () => {
 	} );
 
 	// start nodes and wait for cluster settling
-	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( "elected", cb ) ), done ) );
+	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
@@ -47,7 +47,7 @@ describe( 'log compaction', () => {
 	it( 'can insert 30 items', { timeout: 10000 }, done => {
 		const items = new Array( 30 );
 		for ( let i = 0; i < 30; i++ ) {
-			items[i] = ( "00" + i ).slice( -3 );
+			items[i] = ( '00' + i ).slice( -3 );
 		}
 
 		async.each( items, ( item, cb ) => leveldown.put( item, item, cb ), done );
@@ -82,7 +82,7 @@ describe( 'log compaction', () => {
 			let nextEntry = 0;
 			newNode._db.state.createReadStream()
 				.on( 'data', ( entry ) => {
-					expect( entry.key ).to.equal( ( "00" + nextEntry ).slice( -3 ) );
+					expect( entry.key ).to.equal( ( '00' + nextEntry ).slice( -3 ) );
 					nextEntry++;
 				} )
 				.once( 'end', () => {
@@ -97,7 +97,7 @@ describe( 'log compaction', () => {
 
 			const items = [];
 			for ( let i = 30; i < 60; i++ ) {
-				items.push( ( "00" + i ).slice( -3 ) );
+				items.push( ( '00' + i ).slice( -3 ) );
 			}
 			async.each( items, ( item, cb ) => {
 					leveldown.put( item, item, cb );
@@ -111,7 +111,7 @@ describe( 'log compaction', () => {
 			let nextEntry = 0;
 			newNode._db.state.createReadStream()
 				.on( 'data', ( entry ) => {
-					expect( entry.key ).to.equal( ( "00" + nextEntry ).slice( -3 ) );
+					expect( entry.key ).to.equal( ( '00' + nextEntry ).slice( -3 ) );
 					nextEntry++;
 				} )
 				.once( 'end', () => {

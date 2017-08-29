@@ -1,6 +1,7 @@
 'use strict';
 
-const debug = require( 'debug' )( 'skiff.node' );
+const debug = require( 'debug' )( 'skiff.shell' );
+
 const merge = require( 'deepmerge' );
 const EventEmitter = require( 'events' );
 const async = require( 'async' );
@@ -332,12 +333,10 @@ class Shell extends EventEmitter {
 	}
 }
 
-createNodeShell.createNetwork = function createNetwork( options ) {
-	return Network( options );
+module.exports = function createNodeShell( id, options ) {
+	return new Shell( id, options );
 };
 
-module.exports = createNodeShell;
-
-function createNodeShell( id, options ) {
-	return new Shell( id, options );
-}
+module.exports.createNetwork = function createNetwork( options ) {
+	return Network( options );
+};

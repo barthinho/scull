@@ -35,7 +35,7 @@ describe( 'log replication catchup', () => {
 	} );
 
 	// start nodes and wait for cluster settling
-	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( "elected", cb ) ), done ) );
+	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
 
 	after( done => {
 		async.each( nodes.concat( newNode ), ( node, cb ) => node.stop( cb ), done );

@@ -30,7 +30,7 @@ describe( 'log replication', () => {
 	} );
 
 	// start nodes and wait for cluster settling
-	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( "elected", cb ) ), done ) );
+	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
 
 	after( done => {
 		async.each( nodes, ( node, cb ) => node.stop( cb ), done );
@@ -51,7 +51,7 @@ describe( 'log replication', () => {
 		done();
 	} );
 
-	it( 'settles again', { timeout: 5000 }, done => preferred.once( "elected", done ) );
+	it( 'settles again', { timeout: 5000 }, done => preferred.once( 'elected', () => done() ) );
 
 	it( 'resulted in electing the preferred', done => {
 		expect( preferred.is( 'leader' ) ).to.be.true();

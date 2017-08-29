@@ -31,11 +31,11 @@ describe( 'passive network', () => {
 	it( 'can be created', done => {
 		network = new Network();
 		network.once( 'listening', ( options ) => {
-			if ( options.host === "0.0.0.0" ) {
+			if ( options.host === '0.0.0.0' ) {
 				// simulated network was configured to listen on any (local) IP
-				// -> can't connect to "any IP"
+				// -> can't connect to 'any IP'
 				// -> use loopback IP 127.0.0.1 instead
-				options.host = "127.0.0.1";
+				options.host = '127.0.0.1';
 			}
 
 			clientOptions = options;
