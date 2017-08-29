@@ -27,7 +27,8 @@ const importantStateEvents = [
 	'joined',
 	'left',
 	'electing',
-	'elected'
+	'elected',
+	'new leader'
 ];
 
 class Shell extends EventEmitter {
@@ -44,10 +45,11 @@ class Shell extends EventEmitter {
 		this._dispatcher = new IncomingDispatcher( { id } );
 
 		const connections = {
-			isConnectedTo: ( addr ) => this._connections.indexOf( addr ) >= 0
+			isConnectedTo: addr => this._connections.indexOf( addr ) > -1
 		};
+
 		// connections
-		this._connections = this._options.peers.filter( addr => addr !== id );
+		this._connections = this._options.peers.filter( addr => addr.toString() !== id.toString() );
 
 		this.on( 'connect', peer => {
 			if ( this._connections.indexOf( peer ) < 0 ) {
