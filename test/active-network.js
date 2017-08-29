@@ -8,7 +8,7 @@ const expect = require( 'code' ).expect;
 
 const async = require( 'async' );
 const Address = require( '../lib/address' );
-const net = require( 'net' );
+const Net = require( 'net' );
 const Msgpack = require( 'msgpack5' );
 
 const Network = require( '../lib/network/active' );
@@ -47,7 +47,7 @@ describe( 'active network', () => {
 		async.mapSeries( serverAddresses, ( addr, cb ) => {
 			const index = ++lindex;
 			const maddr = Address( addr );
-			const server = net.createServer( onServerConnection );
+			const server = Net.createServer( onServerConnection );
 			const listenAddr = maddr.nodeAddress();
 			server.listen( {
 				port: listenAddr.port,
@@ -103,9 +103,7 @@ describe( 'active network', () => {
 		network.write( { to: '/ip4/127.0.0.1/tcp/8083', what: 'hey' }, done );
 	} );
 
-	it( 'waits a bit', done => {
-		setTimeout( done, A_BIT );
-	} );
+	it( 'waits a bit', done => setTimeout( done, A_BIT ) );
 
 	it( 'allows peer to disconnect', done => {
 		serverConns[0].destroy();
@@ -132,9 +130,7 @@ describe( 'active network', () => {
 		network.write( { to: serverAddresses[1], what: 'hey you' } );
 	} );
 
-	it( 'waits a bit', done => {
-		setTimeout( done, A_BIT );
-	} );
+	it( 'waits a bit', done => setTimeout( done, A_BIT ) );
 
 	it( 'can still send data to another peer 2', done => {
 		const node = network.node( serverAddresses[2] );
@@ -189,9 +185,7 @@ describe( 'active network', () => {
 		done();
 	} );
 
-	it( 'waits a bit', done => {
-		setTimeout( done, A_BIT );
-	} );
+	it( 'waits a bit', done => setTimeout( done, A_BIT ) );
 
 	it( 'catches errors', done => {
 		serverHandlers[2] = function( conn ) {
@@ -218,9 +212,7 @@ describe( 'active network', () => {
 		} ), A_BIT );
 	} );
 
-	it( 'waits a bit', done => {
-		setTimeout( done, A_BIT );
-	} );
+	it( 'waits a bit', done => setTimeout( done, A_BIT ) );
 
 	it( 'can get closed', done => {
 		let closed = 0;
