@@ -60,7 +60,7 @@ describe( 'log compaction', () => {
 
 	it( 'waits for consensus with all nodes of cluster', { timeout: 5000 }, done => leader.waitFor( nodeAddresses, done ) );
 
-	describe( 'node that is late to the party', () => {
+	describe( 'adding node after reaching consensus', () => {
 		let newNode;
 
 		before( done => {
@@ -76,9 +76,9 @@ describe( 'log compaction', () => {
 			async.each( nodes.concat( newNode ), ( node, cb ) => node.stop( cb ), done );
 		} );
 
-		it( 'waits for consensus of late node', { timeout: 5000 }, done => leader.waitFor( newNodeAddress, done ) );
+		it( 'waits for full consensus of extended node set', { timeout: 5000 }, done => leader.waitFor( nodeAddresses.concat( newNodeAddress ), done ) );
 
-		it( 'catches up', done => {
+		it( 'ensures added node has catched up', done => {
 			let nextEntry = 0;
 			newNode._db.state.createReadStream()
 				.on( 'data', ( entry ) => {
@@ -105,9 +105,9 @@ describe( 'log compaction', () => {
 				done );
 		} );
 
-		it( 'waits for consensus of late node', { timeout: 5000 }, done => nodes.find( node => node.is( "leader" ) ).waitFor( newNode.id, done ) );
+		it( 'waits for consensus of added node', { timeout: 5000 }, done => leader.waitFor( newNodeAddress, done ) );
 
-		it( 'new node catches up', done => {
+		it( 'includes consensus on added entries at added node', done => {
 			let nextEntry = 0;
 			newNode._db.state.createReadStream()
 				.on( 'data', ( entry ) => {
