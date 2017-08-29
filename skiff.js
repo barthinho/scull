@@ -24,7 +24,9 @@ const importantStateEvents = [
 	'leader',
 	'rpc latency',
 	'joined',
-	'left'
+	'left',
+	'electing',
+	'elected'
 ];
 
 class Shell extends EventEmitter {
@@ -270,6 +272,14 @@ class Shell extends EventEmitter {
 
 	readConsensus( callback ) {
 		this._node.readConsensus( callback );
+	}
+
+	waitFor( peers, callback ) {
+		if ( !Array.isArray( peers ) ) {
+			peers = [ peers ];
+		}
+
+		this._node.waitFor( peers.map( peer => Address( peer ).toString() ), callback );
 	}
 
 	// ------- State
