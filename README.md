@@ -131,6 +131,22 @@ Weakens the node for the duration. During this period, the node transitions to a
 
 Asks for read consensus from the cluster. Calls back when there is an error (with the error as the first argument) or succeeded.
 
+The consensus is read from cluster when the majority of cluster nodes confirms consensus on current state of cluster.
+
+## skiff.waitFor( peers, callback )
+
+Asks for read consensus from the cluster additionally requiring confirmation from provided peers. Calls back when there is an error (with the error as the first argument) or succeeded.
+
+This method basically works like `skiff.readConsensus()` but isn't satisfied by positive replies from majority of cluster nodes, only. It also requires positive replies from one or more peers explicitly.
+
+```javascript
+skiff.peers( peers => skiff.waitFor( peers, () => {
+	// do something
+} ) );
+```
+
+This code template can be used to wait for consensus confirmed from all peer nodes of cluster.
+
 ## Events
 
 A skiff instance emits the following events:
@@ -144,6 +160,8 @@ A skiff instance emits the following events:
 * `joined (peerAddress)`: when a peer joined the cluster
 * `left (peerAddress)`: whan a peer left the cluster
 * `rpc latency (ms)`: the latency for an RPC call, in milisenconds
+* `electing`: marks cluster starting leader election
+* `elected`: marks cluster having elected leader
 
 ## Skiff.createNetwork (options)
 
