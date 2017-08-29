@@ -16,7 +16,7 @@
 
 This package is a fork of npm package [skiff](https://www.npmjs.com/package/skiff). Due to sharing history it is using same version numbers as are used with original [skiff](https://www.npmjs.com/package/skiff).
 
-This fork has been started to review the project's code and adopt it to fit conventions defined for hitchy framework. Even though this sounds like this fork being tightly bound to hitchy we guarantee it's not. The fork has been started to refactor parts of code, modernizing its API and adding some commands to cluster missing in original project.
+This fork has been started to review the project's code and adopt it to fit conventions defined for [hitchy framework](http://hitchyjs.org). Even though this sounds like this fork being tightly bound to hitchy we guarantee it's not. The fork has been started to refactor parts of code, modernizing its API and adding some commands to cluster missing in original project. We basically intend to keep this project API compatible to [skiff](https://www.npmjs.com/package/skiff), too.
 
 ## Installation
 
@@ -27,31 +27,32 @@ $ npm install hitchy-skiff --save
 ## Usage
 
 ```javascript
-const Skiff = require('skiff');
+const Skiff = require( 'hitchy-skiff' );
 
 const options = {
-  db: require('memdown'), // in memory database
+  db: require( 'memdown' ), // in memory database
   peers: [ // peer addresses
     '/ip4/127.0.0.1/tcp/9491',
     '/ip4/127.0.0.1/tcp/9492'
   ]
 };
-const skiff = Skiff('/ip4/127.0.0.1/tcp/9490', options);
+
+const skiff = Skiff( '/ip4/127.0.0.1/tcp/9490', options );
 
 // expose the cluster as a Levelup-compatible database
 const db = skiff.levelup();
 
-skiff.start(err => {
-  if (err) {
-    console.error('Error starting skiff node: ', err.message)
+skiff.start( err => {
+  if ( err ) {
+    console.error( 'Error starting skiff node: ', err.message );
   } else {
-    console.log('Skiff node started');
+    console.log( 'Skiff node started' );
 
-    db.put('key', 'value', (err) => {
+    db.put( 'key', 'value', ( err ) => {
       // ...
-    });
+    } );
   }
-})
+} );
 ```
 
 # API
@@ -168,7 +169,8 @@ A skiff instance emits the following events:
 * `left (peerAddress)`: whan a peer left the cluster
 * `rpc latency (ms)`: the latency for an RPC call, in milisenconds
 * `electing`: marks cluster starting leader election
-* `elected`: marks cluster having elected leader
+* `elected (leader)`: marks cluster having elected leader
+* `new leader (leader)`: marks node having changed local information on current leader on receiving message
 
 ## Skiff.createNetwork (options)
 
