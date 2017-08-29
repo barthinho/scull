@@ -5,16 +5,22 @@
 [Raft](https://raft.github.io/) Consensus Algorithm implementation for Node.js.
 
 [![npm version](https://badge.fury.io/js/skiff.svg)](https://badge.fury.io/js/skiff)
-[![Build Status](https://travis-ci.org/pgte/skiff.svg?branch=master)](https://travis-ci.org/pgte/skiff)
+[![Build Status](https://travis-ci.org/hitchyjs/skiff.svg?branch=master)](https://travis-ci.org/hitchyjs/skiff)
 
 * Persists to LevelDB (or any database exposing a [LevelDown](https://github.com/level/leveldown) interface).
 * Exposes the cluster as a [Levelup](https://github.com/level/levelup#readme) or [Leveldown](https://github.com/level/leveldown#readme)-compatible interface, with which you can extend using [the Levelup plugins](https://github.com/Level/levelup/wiki/Modules#plugins).
 * Encodes messages using Msgpack
 
+## About
+
+This package is a fork of npm package [skiff](https://www.npmjs.com/package/skiff). Due to sharing history it is using same version numbers as are used with original [skiff](https://www.npmjs.com/package/skiff).
+
+This fork has been started to review the project's code and adopt it to fit conventions defined for hitchy framework. Even though this sounds like this fork being tightly bound to hitchy we guarantee it's not. The fork has been started to refactor parts of code, modernizing its API and adding some commands to cluster missing in original project.
+
 ## Installation
 
 ```bash
-$ npm install skiff --save
+$ npm install hitchy-skiff --save
 ```
 
 ## Usage

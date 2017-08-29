@@ -1,5 +1,5 @@
 {
-  "name": "skiff",
+  "name": "hitchy-skiff",
   "version": "1.10.0",
   "description": "Raft for Node.js",
   "main": "skiff.js",
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pgte/skiff.git"
+    "url": "https://github.com/hitchyjs/skiff"
   },
   "keywords": [
     "raft",
@@ -24,11 +24,18 @@
     "leveldb"
   ],
   "author": "pgte",
+  "contributors": [
+    {
+      "name": "Thomas Urban",
+      "email": "thomas.urban@cepharum.de",
+      "url": "https://cepharum.de"
+    }
+  ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pgte/skiff/issues"
+    "url": "https://github.com/hitchyjs/skiff/issues"
   },
-  "homepage": "https://github.com/pgte/skiff#readme",
+  "homepage": "https://github.com/hitchyjs/skiff#readme",
   "devDependencies": {
     "code": "^3.0.1",
     "eslint": "^3.1.1",
