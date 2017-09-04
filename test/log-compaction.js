@@ -69,18 +69,19 @@ describe( 'log compaction', () => {
 				minLogRetention: 10,
 				peers: nodeAddresses
 			} );
-			newNode.start( done );
+			done();
 		} );
 
-		after( done => {
-			async.each( nodes.concat( newNode ), ( node, cb ) => node.stop( cb ), done );
+		after( done => async.each( nodes.concat( newNode ), ( node, cb ) => node.stop( cb ), done ) );
+
+		it( 'waits for new node to catch up with cluster', { timeout: 5000 }, done => {
+			newNode.on( 'up-to-date', done );
+			newNode.start( () => {} );
 		} );
 
-		it( 'waits for full consensus of extended node set', { timeout: 5000 }, done => leader.waitFor( nodeAddresses.concat( newNodeAddress ), done ) );
-
-		it( 'ensures added node has catched up', done => {
+		it( 'ensures added node has caught up', done => {
 			let nextEntry = 0;
-			newNode._db.state.createReadStream()
+			newNode.db.state.createReadStream()
 				.on( 'data', ( entry ) => {
 					expect( entry.key ).to.equal( ( '00' + nextEntry ).slice( -3 ) );
 					nextEntry++;
@@ -99,17 +100,15 @@ describe( 'log compaction', () => {
 			for ( let i = 30; i < 60; i++ ) {
 				items.push( ( '00' + i ).slice( -3 ) );
 			}
-			async.each( items, ( item, cb ) => {
-					leveldown.put( item, item, cb );
-				},
-				done );
+
+			async.each( items, ( item, cb ) => leveldown.put( item, item, cb ), done );
 		} );
 
 		it( 'waits for consensus of added node', { timeout: 5000 }, done => leader.waitFor( newNodeAddress, done ) );
 
 		it( 'includes consensus on added entries at added node', done => {
 			let nextEntry = 0;
-			newNode._db.state.createReadStream()
+			newNode.db.state.createReadStream()
 				.on( 'data', ( entry ) => {
 					expect( entry.key ).to.equal( ( '00' + nextEntry ).slice( -3 ) );
 					nextEntry++;

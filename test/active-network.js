@@ -7,7 +7,7 @@ const it = lab.it;
 const expect = require( 'code' ).expect;
 
 const async = require( 'async' );
-const Address = require( '../lib/address' );
+const Address = require( '../lib/data/address' );
 const Net = require( 'net' );
 const Msgpack = require( 'msgpack5' );
 

@@ -2,7 +2,7 @@
   "name": "hitchy-skiff",
   "version": "1.10.0",
   "description": "Raft for Node.js",
-  "main": "skiff.js",
+  "main": "shell.js",
   "scripts": {
     "test": "npm run quick-tests",
     "quick-tests": "lab -vl test/active-network.js && lab -vl test/passive-network.js && lab -vl test/incoming-dispatcher.js && lab -vl test/election.js && lab -vl test/log-replication.js && lab -vl test/log-replication-catchup.js && lab -vl test/log-compaction.js && lab -vl test/leveldown.js && lab -vl test/levelup.js && lab -vl test/persistence.js && lab -vl test/remote-commands.js && lab -vl test/weakening.js",
@@ -11,7 +11,7 @@
     "resilience-tests-disk": "lab test/resilience/resilience-order-disk.js && lab test/resilience/resilience-chaos-disk.js",
     "test-some": "lab -vl test/active-network.js test/election.js",
     "test-coverage": "node --harmony node_modules/istanbul/lib/cli.js cover -- lab -vl && istanbul check-coverage",
-    "style": "eslint skiff.js lib"
+    "style": "eslint shell.js lib"
   },
   "repository": {
     "type": "git",

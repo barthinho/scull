@@ -12,8 +12,6 @@ const memdown = require( 'memdown' );
 
 const Node = require( '../' );
 
-const A_BIT = 4000;
-
 describe( 'log replication catchup', () => {
 	let nodes, follower, leader, newNode;
 
@@ -77,13 +75,14 @@ describe( 'log replication catchup', () => {
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
-		leader.join( newAddress, done );
+		leader.join( newAddress, () => {} );
+		newNode.on( 'up-to-date', done );
 	} );
 
-	before( { timeout: 5000 }, done => leader.waitFor( nodeAddresses.concat( newAddress ), done ) );
 
-	it( 'new node gets updated', done => {
-		const db = newNode._db.db;
+	it( 'new node got updated', done => {
+		const db = newNode.db.db;
+
 		db.sublevel( 'state' ).get( 'a', ( err, value ) => {
 			expect( err ).to.be.null();
 			expect( value ).to.equal( '1' );

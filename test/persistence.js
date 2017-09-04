@@ -60,9 +60,7 @@ describe( 'persistence', () => {
 		done();
 	} );
 
-	before( done => {
-		async.each( nodes, ( node, cb ) => node.start( cb ), done );
-	} );
+	before( done => async.each( nodes, ( node, cb ) => node.start( cb ), done ) );
 
 	after( done => {
 		async.each( nodes, ( node, cb ) => node.stop( cb ), done );
@@ -81,13 +79,14 @@ describe( 'persistence', () => {
 			};
 		} );
 
-		const snapshot = leader._node._getPersistableState();
-		expect( typeof snapshot.currentTerm ).to.equal( 'number' );
-		expect( snapshot.currentTerm >= 1 ).to.be.true();
-		expect( snapshot.votedFor ).to.equal( leader.id.toString() );
+		const currentTerm = leader.node.term;
+
+		expect( typeof currentTerm ).to.equal( 'number' );
+		expect( currentTerm >= 1 ).to.be.true();
+		expect( leader.node.votedFor.toString() ).to.equal( leader.id.toString() );
 
 		nodes.forEach( node => {
-			const entries = node.logEntries().map( entry => {
+			const entries = node.node.log.entries.map( entry => {
 				return {
 					i: entry.i, t: entry.t, c: {
 						type: entry.c.type,
@@ -96,11 +95,9 @@ describe( 'persistence', () => {
 					}
 				};
 			} );
-			expect( entries ).to.equal( expected );
 
-			const nodeSnapshot = node._node._getPersistableState();
-			expect( nodeSnapshot.currentTerm ).to.equal( snapshot.currentTerm );
-			expect( typeof nodeSnapshot.votedFor ).to.equal( 'string' );
+			expect( entries ).to.equal( expected );
+			expect( node.node.term ).to.equal( currentTerm );
 		} );
 		done();
 	} );

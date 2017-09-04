@@ -32,9 +32,7 @@ describe( 'log replication', () => {
 	// start nodes and wait for cluster settling
 	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
 
-	after( done => {
-		async.each( nodes, ( node, cb ) => node.stop( cb ), done );
-	} );
+	after( done => async.each( nodes, ( node, cb ) => node.stop( cb ), done ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
@@ -45,14 +43,14 @@ describe( 'log replication', () => {
 		done();
 	} );
 
-	it( 'leader accepts command', done => {
+	it( 'leader accepts `put` command', done => {
 		leader.command( { type: 'put', key: 'a', value: '1' }, err => {
 			expect( err ).to.be.undefined();
 			done();
 		} );
 	} );
 
-	it( 'leader accepts query command', done => {
+	it( 'leader accepts `get` command', done => {
 		leader.command( { type: 'get', key: 'a' }, ( err, result ) => {
 			expect( err ).to.be.null();
 			expect( result ).to.equal( '1' );

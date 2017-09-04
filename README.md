@@ -70,7 +70,7 @@ Arguments:
     * `port` (integer): TCP port. Defaults to the port in `address`
     * `host` (string): host name to bind the server to. Defaults to the host name in the `address`
   * rpcTimeoutMS (integer, defaults to `2000`): Timeout for RPC calls.
-  * peers (array of strings, defaults to `[]`): The addresses of the peers (also in the [multiaddr](https://github.com/multiformats/js-multiaddr#readme) format). __If the database you're using is persisted to disk (which is the default), these peers will be overrridden by whatever is loaded from the latest snapshot once the node starts.__
+  * peers (array of strings, defaults to `[]`): The addresses of the peers (also in the [multiaddr](https://github.com/multiformats/js-multiaddr#readme) format). __If the database you're using is persisted to disk (which is the default), these peers will be overridden by whatever is loaded from the latest snapshot once the node starts.__
   * `levelup` (object): options to the internal Levelup database. Defaults to:
 
   ```json
@@ -92,7 +92,7 @@ Arguments:
   * `electionTimeoutMaxMS` (integer, defaults to `600`): The maximum election timeout (ms) for a node. It's the maximum time a node has to wait until no `AppendEntries` message triggers an election.
   * `installSnapshotChunkSize` (integer, defaults to `10`): The maximum number of database records on each `InstallSnapshot` message.
   * `batchEntriesLimit` (integer, defaults to `10`): The maximum number of log entries in a `AppendEntries` message.
-  * `clientRetryRPCTimeout` (integer, defaults to 200): The number of miliseconds the internal client has to wait until retrying
+  * `clientRetryRPCTimeout` (integer, defaults to 200): The number of milliseconds the internal client has to wait until retrying
   * `clientMaxRetries` (integer, defaults to 10): The maximum number of times the client is allowed to retry the remote call.
 
 ## skiff.start (callback)
@@ -165,12 +165,14 @@ A skiff instance emits the following events:
 * `disconnect (peer)`: once a leader node is disconnected from a peer
 * `new state (state)`: once a node changes state (possible states are `follower`, `candidate` and `leader`)
 * `leader`: once the node becomes the cluster leader
-* `joined (peerAddress)`: when a peer joined the cluster
-* `left (peerAddress)`: whan a peer left the cluster
-* `rpc latency (ms)`: the latency for an RPC call, in milisenconds
+* `joined (peerAddress)`: emitted on peer joining the cluster
+* `left (peerAddress)`: emitted on peer leaving the cluster
+* `rpc latency (ms)`: the latency for an RPC call, in milliseconds
+* `heartbeat timeout`: marks current non-leading node missing frequent request from current leader node (considering current node or leader node detached from cluster)
 * `electing`: marks cluster starting leader election
 * `elected (leader)`: marks cluster having elected leader
 * `new leader (leader)`: marks node having changed local information on current leader on receiving message
+* `up-to-date`: marks node having received snapshot from current leader to catch up with cluster
 
 ## Skiff.createNetwork (options)
 
@@ -179,7 +181,7 @@ Creates a network you can share amongst several Skiff nodes in the same process.
 Options:
 
 * `active` (object):
-  * `inactivityTimeout` (integer, miliseconds, defaults to `5000`): The amount of time to wait before a client connection is closed because of inactivity.
+  * `inactivityTimeout` (integer, milliseconds, defaults to `5000`): The amount of time to wait before a client connection is closed because of inactivity.
 * `passive` (object):
   * `server` (object):
     * `port` (integer, defaults to `9163`): the port the server should listen on
@@ -188,7 +190,7 @@ Options:
 
 # Sponsors
 
-Development of Skiff is sponsored by [YLD](https://yld.io).
+Development of [Skiff](https://www.npmjs.com/package/skiff) is sponsored by [YLD](https://yld.io). Development of hitchy-skiff is supported by [cepharum](https://cepharum.de).
 
 # License
 
@@ -196,4 +198,4 @@ Development of Skiff is sponsored by [YLD](https://yld.io).
 
 # Copyright
 
-Copyright (c) 2016 Pedro Teixeira
+Copyright (c) 2016 Pedro Teixeira, hitchy-skiff (c) 2017 cepharum GmbH

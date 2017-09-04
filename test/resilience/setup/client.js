@@ -143,7 +143,7 @@ function Client( nodes, _options ) {
 	function parsingWreckReply( address, expectedCode, retry, done ) {
 		return function( err, res, payload ) {
 			if ( err ) {
-				if ( err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET' || err.code === 'ETIMEOUT' ) {
+				if ( err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT' ) {
 					leader = null;
 					setTimeout( retry, 100 );
 				} else {
@@ -164,7 +164,7 @@ function Client( nodes, _options ) {
 							leader = undefined;
 						}
 						setImmediate( retry );
-					} else if ( error.code === 'ETIMEOUT' ) {
+					} else if ( error.code === 'ETIMEDOUT' ) {
 						setImmediate( retry );
 					} else {
 						done( new Error( `response status code was ${res.statusCode}, response: ${payload}` ) );
