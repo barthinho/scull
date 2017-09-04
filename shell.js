@@ -26,7 +26,7 @@ const defaultOptions = require( './lib/default-options' );
  *
  * @type {string[]}
  */
-const importantStateEvents = [
+const importantNodeEvents = [
 	'warning',
 	'new state',
 	'heartbeat timeout',
@@ -57,7 +57,6 @@ const importantStateEvents = [
  */
 class Shell extends EventEmitter {
 	/**
-	 *
 	 * @param {string|Address} id unique ID a.k.a. network address of node
 	 * @param {object<string,*>} options
 	 */
@@ -126,7 +125,7 @@ class Shell extends EventEmitter {
 
 
 		// propagate events of wrapped instanceof Node
-		importantStateEvents.forEach( event => node.on( event, this.emit.bind( this, event ) ) );
+		importantNodeEvents.forEach( event => node.on( event, this.emit.bind( this, event ) ) );
 	}
 
 
@@ -136,121 +135,150 @@ class Shell extends EventEmitter {
 	 * Starts current node by connecting to network and loading previously
 	 * persisted state of node from its local database.
 	 *
-	 * @param {function(error:Error)} callback gets invoked on node having started
+	 * @param {function(error:?Error=)} callback gets invoked on node having started
+	 * @returns {Promise} resolved on node started (returned on omitting callback)
 	 */
-	start( callback ) {
-		const id = this.id;
+	start( callback = null ) {
+		const promise = new Promise( ( resolve, reject ) => {
+			const id = this.id;
 
-		Debug( '%s: start state is %s', id, this._startState );
+			Debug( '%s: start state is %s', id, this._startState );
 
-		switch ( this._startState ) {
-			case 'stopped' :
-				this._startState = 'starting';
+			switch ( this._startState ) {
+				case 'stopped' :
+					this._startState = 'starting';
 
-				Debug( 'starting node %s', id );
-				Async.parallel(
-					[
-						this._startNetwork.bind( this ),
-						this._loadPersistedState.bind( this )
-					],
-					err => {
-						Debug( '%s: done starting', id );
+					Debug( 'starting node %s', id );
+					Async.parallel(
+						[
+							this._startNetwork.bind( this ),
+							this._loadPersistedState.bind( this )
+						],
+						error => {
+							Debug( '%s: done starting', id );
 
-						if ( err ) {
-							this._startState = 'stopped';
-						} else {
-							this._startState = 'started';
-							this.emit( 'started' );
-						}
+							this.node.transition( 'follower' );
 
-						this.node.transition( 'follower' );
+							if ( error ) {
+								this._startState = 'stopped';
+								reject( error );
+							} else {
+								this._startState = 'started';
+								this.emit( 'started' );
+								resolve();
+							}
+						} );
+					break;
 
-						callback( err );
-					} );
-				break;
+				case 'started' :
+					resolve();
+					break;
 
-			case 'started' :
-				process.nextTick( callback );
-				break;
+				case 'starting' :
+					this.once( 'started', resolve );
+					break;
+			}
+		} );
 
-			case 'starting' :
-				this.once( 'started', callback );
-				break;
+		if ( callback ) {
+			promise.then( () => callback(), callback );
+		} else {
+			return promise;
 		}
 	}
 
 	/**
-	 * Disconnects current node from network
-	 * @param cb
+	 * Disconnects current node from network.
+	 *
+	 * @param {function(error:?Error=)} callback gets invoked on node having stopped
+	 * @returns {Promise} resolved on node stopped (returned on omitting callback)
 	 */
-	stop( cb ) {
-		this.node.stop();
-		this.connections.stop();
+	stop( callback = null ) {
+		const promise = new Promise( resolve => {
+			this.node.stop();
+			this.connections.stop();
 
-		this._startState = 'stopped';
+			this._startState = 'stopped';
 
-		if ( this._network ) {
-			this.emit( 'finish', this._network );
+			if ( this._network ) {
+				this.emit( 'finish', this._network );
 
-			this._network = undefined;
+				this._network = undefined;
 
-			if ( this._implicitNetwork ) {
-				this._implicitNetwork.active.end();
-				this._implicitNetwork.passive.emit( 'finish' );
+				if ( this._implicitNetwork ) {
+					this._implicitNetwork.active.end();
+					this._implicitNetwork.passive.emit( 'finish' );
 
-				if ( cb ) {
-					return this._implicitNetwork.passive.once( 'closed', cb );
+					this._implicitNetwork.passive.once( 'closed', resolve );
+
+					this._implicitNetwork = undefined;
+
+					return;
 				}
-
-				this._implicitNetwork = undefined;
 			}
-		}
 
-		if ( cb ) {
-			process.nextTick( cb );
+			resolve();
+		} );
+
+		if ( callback ) {
+			promise.then( () => callback(), callback );
+		} else {
+			return promise;
 		}
 	}
 
-	_startNetwork( cb ) {
-		const network = this._getNetworkConstructors();
-		const node = this.node;
+	/**
+	 * Disconnects current node from network.
+	 *
+	 * @param {function(error:?Error=)} callback gets invoked on network having started
+	 * @returns {Promise} resolved on network started (returned on omitting callback)
+	 */
+	_startNetwork( callback = null ) {
+		const promise = new Promise( resolve => {
+			const network = this._getNetworkConstructors();
+			const node = this.node;
 
-		const server = network.passive.node( this.id );
-		const client = network.active.node( this.id );
+			const server = network.passive.node( this.id );
+			const client = network.active.node( this.id );
 
-		this._network = { active: client, passive: server };
+			this._network = { active: client, passive: server };
 
-		// pipe all incoming messages into dispatcher bound to wrapped node
-		// - on receiving requests
-		server.pipe( this.dispatcher, { end: false } );
-		// - on receiving responses
-		client.pipe( this.dispatcher, { end: false } );
+			// pipe all incoming messages into dispatcher bound to wrapped node
+			// - on receiving requests
+			server.pipe( this.dispatcher, { end: false } );
+			// - on receiving responses
+			client.pipe( this.dispatcher, { end: false } );
 
-		// pipe output streams of wrapped node into network sockets for actual
-		// transmission
-		node.requestOut.pipe( client, { end: false } );
-		node.responseOut.pipe( server, { end: false } );
+			// pipe output streams of wrapped node into network sockets for actual
+			// transmission
+			node.requestOut.pipe( client, { end: false } );
+			node.responseOut.pipe( server, { end: false } );
 
 
-		// expose connection state events on client-side socket
-		const _boundConnect = this.emit.bind( this, 'connect' );
-		const _boundDisconnect = this.emit.bind( this, 'disconnect' );
+			// expose connection state events on client-side socket
+			const _boundConnect = this.emit.bind( this, 'connect' );
+			const _boundDisconnect = this.emit.bind( this, 'disconnect' );
 
-		client.on( 'connect', _boundConnect );
-		client.on( 'disconnect', _boundDisconnect );
+			client.on( 'connect', _boundConnect );
+			client.on( 'disconnect', _boundDisconnect );
 
-		this.once( 'finish', network => {
-			network.active.removeListener( 'connect', _boundConnect );
-			network.active.removeListener( 'disconnect', _boundDisconnect );
+			this.once( 'finish', network => {
+				network.active.removeListener( 'connect', _boundConnect );
+				network.active.removeListener( 'disconnect', _boundDisconnect );
+			} );
+
+
+			if ( network.passive.listening() ) {
+				process.nextTick( resolve );
+			} else {
+				network.passive.once( 'listening', () => { resolve(); } );
+			}
 		} );
 
-
-		if ( cb ) {
-			if ( network.passive.listening() ) {
-				process.nextTick( cb );
-			} else {
-				network.passive.once( 'listening', () => { cb(); } );
-			}
+		if ( callback ) {
+			promise.then( callback, callback );
+		} else {
+			return promise;
 		}
 	}
 
@@ -272,11 +300,14 @@ class Shell extends EventEmitter {
 		return network;
 	}
 
-	_loadPersistedState( cb ) {
-		this.db.load( ( err, results ) => {
-			if ( err ) {
-				cb( err );
-			} else {
+	/**
+	 * @param {function(error:?Error=)} callback gets invoked on having loaded persisted state
+	 * @returns {Promise} resolved on persisted state loaded into node (returned on omitting callback)
+	 * @protected
+	 */
+	_loadPersistedState( callback = null ) {
+		const promise = this.db.load()
+			.then( results => {
 				this.node.log.restart( results.log );
 
 				if ( results.meta.currentTerm ) {
@@ -290,56 +321,112 @@ class Shell extends EventEmitter {
 				if ( results.meta.peers ) {
 					this.node.peers = results.meta.peers;
 				}
+			} );
 
-				cb();
-			}
-		} );
+		if ( callback ) {
+			promise.then( () => callback(), callback );
+		} else {
+			return promise;
+		}
 	}
 
 	// ------ Topology
 
-	join( address, done ) {
+	/**
+	 * Registers node at given address to be joining cluster.
+	 *
+	 * @param {Address|string} address address of node to join the cluster
+	 * @param {function(error:?Error=)} done gets invoked on error or on success
+	 * @returns {Promise} resolved when finished (returned on omitting callback)
+	 */
+	join( address, done = null ) {
 		Debug( '%s: joining %s', this.id, address );
 
-		this.start( err => {
-			if ( err ) {
-				done( err );
-			} else {
-				this.node.join( address, done );
-			}
-		} );
+		const promise = this.start()
+			.then( () => this.node.join( address ) );
+
+		if ( done ) {
+			promise.then( done, done );
+		} else {
+			return promise;
+		}
 	}
 
-	leave( address, done ) {
+	/**
+	 * Removes node at given address from list of peering nodes in cluster.
+	 *
+	 * @param {Address|string} address address of node to leave the cluster
+	 * @param {function(error:?Error=)} done gets invoked on error or on success
+	 * @returns {Promise} resolved when finished (returned on omitting callback)
+	 */
+	leave( address, done = null ) {
 		Debug( '%s: leaving %s', this.id, address );
 
-		this.start( err => {
-			if ( err ) {
-				done( err );
-			} else {
-				this.node.leave( address, done );
-			}
-		} );
+		const promise = this.start()
+			.then( () => this.node.leave( address ) );
+
+		if ( done ) {
+			promise.then( done, done );
+		} else {
+			return promise;
+		}
 	}
 
 	// ------ Commands
 
-	command( command, options, callback ) {
+	/**
+	 * Removes node at given address from list of peering nodes in cluster.
+	 *
+	 * @param {object} command command to execute
+	 * @param {object<string,*>} options options for executing command
+	 * @param {function(error:?Error=)} callback gets invoked on error or on success
+	 * @returns {Promise} resolved when finished (returned on omitting callback)
+	 */
+	command( command, options = {}, callback = null ) {
 		if ( typeof options === 'function' ) {
 			callback = options;
 			options = {};
 		}
 
+		let promise;
+
 		if ( this.is( 'leader' ) ) {
-			this.commandQueue.write( { command, options, callback } );
+			promise = new Promise( ( resolve, reject ) => {
+				this.commandQueue.write( { command, options, callback: ( error, result ) => {
+					if ( error ) {
+						reject( error );
+					} else {
+						resolve( result );
+					}
+				} } );
+			} );
 		} else {
 			// not a leader: bypass queue and forward command to current leader
-			this.node.command( command, options, callback );
+			promise = this.node.command( command, options );
+		}
+
+		if ( callback ) {
+			promise.then( callback, callback );
+		} else {
+			return promise;
 		}
 	}
 
-	readConsensus( callback ) {
-		this.node.readConsensus( callback );
+	/**
+	 * Reads consensus from cluster, that is waiting for majority of cluster
+	 * nodes to confirm leader's track on cluster's current state.
+	 *
+	 * @param {function(error:?Error=)} callback gets invoked on error or on success
+	 * @returns {Promise} resolved when finished (returned on omitting callback)
+	 */
+	readConsensus( callback = null ) {
+		const promise = this.node.readConsensus();
+
+		if ( callback ) {
+			promise.then( callback, callback );
+		} else {
+			return promise;
+		}
 	}
 
 	/**
@@ -347,14 +434,21 @@ class Shell extends EventEmitter {
 	 * but always demanding consensus from provided peers.
 	 *
 	 * @param {string|string[]} peers list of peers demanding consensus confirmation from explicitly
-	 * @param {function(error:Error)} callback
+	 * @param {function(error:?Error=)} callback gets invoked on error or on success
+	 * @returns {Promise} resolved when finished (returned on omitting callback)
 	 */
-	waitFor( peers, callback ) {
+	waitFor( peers, callback = null ) {
 		if ( !Array.isArray( peers ) ) {
 			peers = [peers];
 		}
 
-		this.node.waitFor( peers.map( peer => Address( peer ).toString() ), callback );
+		const promise = this.node.waitFor( peers.map( peer => Address( peer ).toString() ) );
+
+		if ( callback ) {
+			promise.then( callback, callback );
+		} else {
+			return promise;
+		}
 	}
 
 	// ------- State
@@ -391,8 +485,21 @@ class Shell extends EventEmitter {
 		return this._stats;
 	}
 
-	peers( done ) {
-		this.node.fetchPeers( this._network, done );
+	/**
+	 * Fetches list of peers in cluster including statistical information on
+	 * every peer from current leader node.
+	 *
+	 * @param {function(error:?Error=, peers:Array=)} done gets invoked on error or on success
+	 * @returns {Promise<Array>} resolved with list of peers (returned on omitting callback)
+	 */
+	peers( done = null ) {
+		const promise = this.node.fetchPeers( this._network );
+
+		if ( done ) {
+			promise.then( done, done );
+		} else {
+			return promise;
+		}
 	}
 
 	term() {

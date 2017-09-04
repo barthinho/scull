@@ -12,7 +12,7 @@ const memdown = require( 'memdown' );
 
 const Node = require( '../' );
 
-describe( 'log replication', () => {
+describe( 'remote commands', () => {
 	let nodes, followers, leader;
 	const nodeAddresses = [
 		'/ip4/127.0.0.1/tcp/9700',
@@ -55,7 +55,8 @@ describe( 'log replication', () => {
 		}
 
 		async.eachSeries( commands, ( command, cb ) => {
-			followers[command.value % followers.length].command( command, cb );
+			followers[command.value % followers.length].command( command )
+				.then( () => cb(), cb );
 		}, done );
 	} );
 

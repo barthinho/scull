@@ -58,7 +58,9 @@ describe( 'log compaction', () => {
 		done();
 	} );
 
-	it( 'waits for consensus with all nodes of cluster', { timeout: 5000 }, done => leader.waitFor( nodeAddresses, done ) );
+	it( 'waits for consensus with all nodes of cluster', { timeout: 5000 }, done => {
+		leader.waitFor( nodeAddresses ).then( done, done );
+	} );
 
 	describe( 'adding node after reaching consensus', () => {
 		let newNode;
@@ -104,7 +106,9 @@ describe( 'log compaction', () => {
 			async.each( items, ( item, cb ) => leveldown.put( item, item, cb ), done );
 		} );
 
-		it( 'waits for consensus of added node', { timeout: 5000 }, done => leader.waitFor( newNodeAddress, done ) );
+		it( 'waits for consensus of added node', { timeout: 5000 }, done => {
+			leader.waitFor( newNodeAddress ).then( done, done );
+		} );
 
 		it( 'includes consensus on added entries at added node', done => {
 			let nextEntry = 0;

@@ -150,7 +150,7 @@ Asks for read consensus from the cluster additionally requiring confirmation fro
 This method basically works like `skiff.readConsensus()` but isn't satisfied by positive replies from majority of cluster nodes, only. It also requires positive replies from one or more peers explicitly.
 
 ```javascript
-skiff.peers( peers => skiff.waitFor( peers, () => {
+skiff.peers().then( peers => skiff.waitFor( peers ).then( () => {
 	// do something
 } ) );
 ```

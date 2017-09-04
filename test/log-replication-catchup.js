@@ -52,13 +52,13 @@ describe( 'log replication catchup', () => {
 		type: 'put',
 		key: 'a',
 		value: '1'
-	}, done ) );
+	} ).then( () => done, done ) );
 
 	before( done => leader.command( {
 		type: 'put',
 		key: 'b',
 		value: '2'
-	}, done ) );
+	} ).then( () => done, done ) );
 
 	before( { timeout: 5000 }, done => leader.waitFor( nodeAddresses, done ) );
 
