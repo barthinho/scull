@@ -14,7 +14,7 @@ describe( 'log controller', () => {
 	let shell;
 	let log;
 
-	before( done => generateShell( null, s => { shell = s; done(); }, { minLogRetention: 10 } ) );
+	before( done => generateShell( null, s => { shell = s; done(); }, { maxLogRetention: 10 } ) );
 
 	beforeEach( done => {
 		log = new Log( generateNode( shell ) );
@@ -45,16 +45,16 @@ describe( 'log controller', () => {
 	} );
 
 	it( 'adopts options of associated node', done => {
-		expect( log.options.minLogRetention ).to.be.equal( 10 );
+		expect( log.options.maxLogRetention ).to.be.equal( 10 );
 
 		done();
 	} );
 
 	it( 'prefers custom options over those adopted from associated node', done => {
 		log.node.stop();
-		log = new Log( generateNode( shell ), { minLogRetention: 5 } );
+		log = new Log( generateNode( shell ), { maxLogRetention: 5 } );
 
-		expect( log.options.minLogRetention ).to.be.equal( 5 );
+		expect( log.options.maxLogRetention ).to.be.equal( 5 );
 
 		done();
 	} );
@@ -158,7 +158,7 @@ describe( 'log controller', () => {
 		done();
 	} );
 
-	it( 'retains latest applied entry and all non-applied entries in memory ignoring limit set by `minLogRetention` option', done => {
+	it( 'retains latest applied entry and all non-applied entries in memory ignoring limit set by `maxLogRetention` option', done => {
 		for ( let i = 1; i <= 30; i++ ) {
 			log.push( ( '00' + i ).slice( -3 ) );
 		}
@@ -192,14 +192,14 @@ describe( 'log controller', () => {
 
 		// adjust log using Log#appendAfter() not appending anything
 		log.appendAfter( 31, [] );
-		expect( log.entries.length ).to.be.equal( log.options.minLogRetention );
+		expect( log.entries.length ).to.be.equal( log.options.maxLogRetention );
 		// index on last applied hasn't changed
 		expect( log.atIndex( log.stats.lastAppliedIndex - 1 ) ).not.to.be.undefined();
 		expect( log.atIndex( log.stats.lastAppliedIndex ).c ).to.be.equal( '025' );
 		// retained entries are latest pushed to log
 		expect( log.atIndex( 10 ) ).to.be.undefined();
-		expect( log.atIndex( 31 - log.options.minLogRetention ) ).to.be.undefined();
-		for ( let i = 31 - log.options.minLogRetention + 1; i <= 31; i++ ) {
+		expect( log.atIndex( 31 - log.options.maxLogRetention ) ).to.be.undefined();
+		for ( let i = 31 - log.options.maxLogRetention + 1; i <= 31; i++ ) {
 			expect( log.atIndex( i ) ).not.to.be.undefined();
 		}
 
@@ -565,7 +565,7 @@ describe( 'log controller', () => {
 		log.push( 'l' );
 		log.push( 'm' );    // pushed 13th entry (thus compaction has dropped last entry of second term)
 
-		expect( log.options.minLogRetention ).to.be.equal( 10 );
+		expect( log.options.maxLogRetention ).to.be.equal( 10 );
 
 		expect( log.lastIndexForTerm( secondTerm ) ).not.to.be.equal( lastOfSecond ).and.to.be.undefined();
 

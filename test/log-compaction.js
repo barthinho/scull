@@ -25,7 +25,7 @@ describe( 'log compaction', () => {
 		nodes = nodeAddresses.map( ( address ) =>
 			Node( address, {
 				db: Memdown,
-				minLogRetention: 10,
+				maxLogRetention: 10,
 				peers: nodeAddresses.filter( addr => addr !== address ).concat( newNodeAddress )
 			} ) );
 		done();
@@ -66,7 +66,7 @@ describe( 'log compaction', () => {
 		before( done => {
 			newNode = Node( newNodeAddress, {
 				db: Memdown,
-				minLogRetention: 10,
+				maxLogRetention: 10,
 				peers: nodeAddresses
 			} );
 			done();
