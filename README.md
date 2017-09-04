@@ -4,9 +4,11 @@
 
 [Raft](https://raft.github.io/) Consensus Algorithm implementation for Node.js.
 
-[![npm version](https://badge.fury.io/js/skiff.svg)](https://badge.fury.io/js/skiff)
-[![Build Status](https://travis-ci.org/hitchyjs/skiff.svg?branch=master)](https://travis-ci.org/hitchyjs/skiff)
-[![Build Status](https://travis-ci.org/hitchyjs/skiff.svg?branch=develop)](https://travis-ci.org/hitchyjs/skiff)
+[![npm version](https://badge.fury.io/js/hitchy-skiff.svg)](https://badge.fury.io/js/skiff)
+
+* Stable: [![Build Status](https://travis-ci.org/hitchyjs/skiff.svg?branch=master)](https://travis-ci.org/hitchyjs/skiff)
+* Nightly: [![Build Status](https://travis-ci.org/hitchyjs/skiff.svg?branch=develop)](https://travis-ci.org/hitchyjs/skiff)
+
 
 * Persists to LevelDB (or any database exposing a [LevelDown](https://github.com/level/leveldown) interface).
 * Exposes the cluster as a [Levelup](https://github.com/level/levelup#readme) or [Leveldown](https://github.com/level/leveldown#readme)-compatible interface, with which you can extend using [the Levelup plugins](https://github.com/Level/levelup/wiki/Modules#plugins).
