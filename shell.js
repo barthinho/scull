@@ -30,7 +30,6 @@ const importantStateEvents = [
 	'warning',
 	'new state',
 	'heartbeat timeout',
-	'election timeout', // deprecated
 	'leader',
 	'rpc latency',
 	'joined',
