@@ -140,6 +140,10 @@ class Shell extends EventEmitter {
 	 */
 	start( waitForElectionPassed = false ) {
 		if ( !this._started ) {
+			if ( this._stopping ) {
+				throw new Error( 'must not start while stopping node' );
+			}
+
 			this._started = new Promise( ( resolve, reject ) => {
 				const id = this.id;
 
@@ -209,32 +213,46 @@ class Shell extends EventEmitter {
 	 * @returns {Promise} resolved on node stopped
 	 */
 	stop() {
-		return new Promise( resolve => {
-			this.node.stop();
-			this.connections.stop();
-
-			this._startState = 'stopped';
-
-			if ( this._network ) {
-				this.emit( 'finish', this._network );
-
-				this._network = undefined;
-
-				if ( this._implicitNetwork ) {
-					this._implicitNetwork.active.end();
-					this._implicitNetwork.passive.emit( 'finish' );
-
-					this._implicitNetwork.passive.once( 'closed', () => resolve() );
-
-					this._implicitNetwork = undefined;
-
-					return;
-				}
+		if ( !this._stopping ) {
+			if ( !this._started ) {
+				return Promise.resolve();
 			}
 
-			resolve();
-		} )
-			.then( () => this._started = this._elected = undefined );
+			this._stopping = new Promise( resolve => {
+				this.node.stop();
+				this.connections.stop();
+
+				this._startState = 'stopped';
+
+				if ( this._network ) {
+					this.emit( 'finish', this._network );
+
+					this._network = undefined;
+
+					if ( this._implicitNetwork ) {
+						this._implicitNetwork.active.end();
+						this._implicitNetwork.passive.emit( 'finish' );
+
+						let open = !this._implicitNetwork.passive._server.close;
+
+						if ( open ) {
+							this._implicitNetwork.passive.once( 'closed', () => resolve() );
+						}
+
+						this._implicitNetwork = undefined;
+
+						if ( open ) {
+							return;
+						}
+					}
+				}
+
+				resolve();
+			} )
+				.then( () => this._started = this._elected = this._stopping = undefined );
+		}
+
+		return this._stopping;
 	}
 
 	/**
