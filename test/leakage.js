@@ -47,7 +47,7 @@ describe( 'Leakage testing', () => {
 			}
 
 			function create() {
-				return hasStdError() || new Connections( shell, shell.peers ).stop();
+				return hasStdError() || new Connections( shell, shell.options.peers ).stop();
 			}
 
 			finished();
