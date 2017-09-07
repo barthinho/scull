@@ -1,132 +1,161 @@
-'use strict'
+'use strict';
 
-const lab = exports.lab = require('lab').script()
-const describe = lab.experiment
-const it = lab.it
-const expect = require('code').expect
+const Net = require( 'net' );
 
-const net = require('net')
-const Msgpack = require('msgpack5')
-const async = require('async')
+const { experiment: describe, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
 
-const Network = require('../lib/network/passive')
+const Msgpack = require( 'msgpack5' );
+const Async = require( 'async' );
 
-describe('passive network', () => {
-  let network, clientOptions
+const Network = require( '../lib/network/passive' );
 
-  const to = '/ip4/127.0.0.1/tcp/9163'
+describe( 'passive network', () => {
+	let network, clientOptions;
 
-  const clientAddresses = [
-    '/ip4/127.0.0.1/tcp/8080/p/abc',
-    '/ip4/127.0.0.1/tcp/8081/p/abc',
-    '/ip4/127.0.0.1/tcp/8082/p/abc'
-  ]
+	const to = '/ip4/127.0.0.1/tcp/9163';
 
-  const clients = clientAddresses.map(address => {
-    const addr = address.split('/').slice(0, 5).join('/')
-    return { address: addr }
-  })
+	const clientAddresses = [
+		'/ip4/127.0.0.1/tcp/8080/p/abc',
+		'/ip4/127.0.0.1/tcp/8081/p/abc',
+		'/ip4/127.0.0.1/tcp/8082/p/abc'
+	];
 
-  it('can be created', done => {
-    network = new Network()
-    network.once('listening', (options) => {
-      clientOptions = options
-      done()
-    })
-  })
+	const clients = clientAddresses.map( address => {
+		return {
+			address: address.split( '/' ).slice( 0, 5 ).join( '/' )
+		};
+	} );
 
-  it('accepts client connections', done => {
-    async.map(clients, setupClient, done)
-  })
+	it( 'can be created', done => {
+		network = new Network();
+		network.once( 'listening', ( options ) => {
+			if ( options.host === '0.0.0.0' ) {
+				// simulated network was configured to listen on any (local) IP
+				// -> can't connect to 'any IP'
+				// -> use loopback IP 127.0.0.1 instead
+				options.host = '127.0.0.1';
+			}
 
-  it('accepts a msgpack message from a client', done => {
-    const expected = clients.reduce((messages, client) => {
-      messages[client.address] = { from: client.address, to, what: 'hey' }
-      return messages
-    }, {})
+			clientOptions = options;
+			done();
+		} );
+	} );
 
-    const node = network.node(to)
+	it( 'accepts client connections', done => {
+		Async.map( clients, setupClient, done );
+	} );
 
-    node.on('data', (message) => {
-      const from = message.from
-      const expectedMessage = expected[from]
-      expect(expectedMessage).to.equal({ from: from, to, what: 'hey' })
-      delete expected[from]
-      if (!Object.keys(expected).length) {
-        node.removeAllListeners('data')
-        done()
-      }
-    })
+	it( 'accepts a msgpack message from a client', done => {
+		const expected = clients.reduce( ( messages, client ) => {
+			messages[client.address] = {
+				from: client.address,
+				to,
+				what: 'hey'
+			};
+			return messages;
+		}, {} );
 
-    clients.forEach(client => {
-      client.encoder.write({ from: client.address, to, what: 'hey' })
-    })
-  })
+		const node = network.node( to );
 
-  it('can send a message and reaches connected client', done => {
-    async.each(clients, (client, cb) => {
-      client.decoder.once('data', message => {
-        expect(message).to.equal({to: client.address, beep: 'boop'})
-        cb()
-      })
-      network.write({to: client.address, beep: 'boop'})
-    }, done)
-  })
+		node.on( 'data', ( message ) => {
+			const from = message.from;
+			const expectedMessage = expected[from];
+			expect( expectedMessage ).to.equal( {
+				from: from,
+				to,
+				what: 'hey'
+			} );
+			delete expected[from];
+			if ( !Object.keys( expected ).length ) {
+				node.removeAllListeners( 'data' );
+				done();
+			}
+		} );
 
-  it('can try sending a message to an unconnected client', done => {
-    network.write({to: 'does not exist', beep: 'nope'}, done)
-  })
+		clients.forEach( client => {
+			client.encoder.write( { from: client.address, to, what: 'hey' } );
+		} );
+	} );
 
-  it('can receive sending a message with no from', done => {
-    clients[0].encoder.write({ something: 'is wrong' }, done)
-  })
+	it( 'can send a message and reaches connected client', done => {
+		Async.each( clients, ( client, cb ) => {
+			client.decoder.once( 'data', message => {
+				expect( message ).to.equal( {
+					to: client.address,
+					beep: 'boop'
+				} );
+				cb();
+			} );
+			network.write( { to: client.address, beep: 'boop' } );
+		}, done );
+	} );
 
-  it('can receive an invalid message', done => {
-    network.once('warning', (warn) => {
-      expect(warn.message).to.equal('not implemented yet')
-      done()
-    })
-    clients[0].conn.write(new Buffer([0xc1]))
-  })
+	it( 'can try sending a message to an unconnected client', done => {
+		network.write( { to: 'does not exist', beep: 'nope' }, done );
+	} );
 
-  it('allows the peer to reconnect and send message', done => {
-    const client = clients[0]
-    const oldConn = client.conn
-    setupClient(client, () => {
-      oldConn.end()
-      client.encoder.write({ from: client.address, to, the: 'new me' })
-      client.encoder.write({ from: client.address, to, the: 'new me again' })
+	it( 'can receive sending a message with no from', done => {
+		clients[0].encoder.write( { something: 'is wrong' }, done );
+	} );
 
-      const node = network.node(to)
+	it( 'can receive an invalid message', done => {
+		network.once( 'warning', ( warn ) => {
+			expect( warn.message ).to.equal( 'not implemented yet' );
+			done();
+		} );
+		clients[0].conn.write( new Buffer( [0xc1] ) );
+	} );
 
-      node.once('data', (message) => {
-        expect(message).to.equal({ from: client.address, to, the: 'new me' })
-        client.decoder.once('data', message => {
-          expect(message).to.equal({ to: client.address, hope: 'this reaches you' })
-          done()
-        })
-        node.write({ to: client.address, hope: 'this reaches you' })
-      })
-    })
-  })
+	it( 'allows the peer to reconnect and send message', done => {
+		const client = clients[0];
+		const oldConn = client.conn;
+		setupClient( client, () => {
+			oldConn.end();
+			client.encoder.write( { from: client.address, to, the: 'new me' } );
+			client.encoder.write( {
+				from: client.address,
+				to,
+				the: 'new me again'
+			} );
 
-  it('can finish', done => {
-    network.end()
-    network.once('closed', done)
-    clients.forEach(client => client.conn.end())
-  })
+			const node = network.node( to );
 
-  function setupClient (client, cb) {
-    const conn = net.connect(clientOptions, cb)
-    const msgpack = Msgpack()
-    const decoder = msgpack.decoder()
-    const encoder = msgpack.encoder()
+			node.once( 'data', ( message ) => {
+				expect( message ).to.equal( {
+					from: client.address,
+					to,
+					the: 'new me'
+				} );
+				client.decoder.once( 'data', message => {
+					expect( message ).to.equal( {
+						to: client.address,
+						hope: 'this reaches you'
+					} );
+					done();
+				} );
+				node.write( { to: client.address, hope: 'this reaches you' } );
+			} );
+		} );
+	} );
 
-    client.conn = conn
-    client.decoder = decoder
-    client.encoder = encoder
+	it( 'can finish', done => {
+		network.end();
+		network.once( 'closed', done );
+		clients.forEach( client => client.conn.end() );
+	} );
 
-    conn.pipe(decoder)
-    encoder.pipe(conn)
-  }
-})
+	function setupClient( client, cb ) {
+		const conn = Net.connect( clientOptions, cb );
+		const msgpack = Msgpack();
+		const decoder = msgpack.decoder();
+		const encoder = msgpack.encoder();
+
+		client.conn = conn;
+		client.decoder = decoder;
+		client.encoder = encoder;
+
+		conn.pipe( decoder );
+		encoder.pipe( conn );
+	}
+} );
