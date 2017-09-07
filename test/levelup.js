@@ -1,16 +1,12 @@
 'use strict';
 
-const lab = exports.lab = require( 'lab' ).script();
-const describe = lab.experiment;
-const before = lab.before;
-const after = lab.after;
-const it = lab.it;
-const expect = require( 'code' ).expect;
+const { experiment: describe, before, after, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
 
-const async = require( 'async' );
-const Memdown = require( 'memdown' );
+const Async = require( 'async' );
+const MemDown = require( 'memdown' );
 
-const Node = require( '../' );
+const Shell = require( '../' );
 
 describe( 'levelup', () => {
 	let nodes, follower, leader, levelup;
@@ -22,36 +18,36 @@ describe( 'levelup', () => {
 
 	before( done => {
 		nodes = nodeAddresses.map( ( address ) =>
-			Node( address, {
-				db: Memdown,
+			Shell( address, {
+				db: MemDown,
 				peers: nodeAddresses.filter( addr => addr !== address )
 			} ) );
 		done();
 	} );
 
 	// start nodes and wait for cluster settling
-	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
-
-	after( done => {
-		async.each( nodes, ( node, cb ) => node.stop( cb ), done );
-	} );
+	before( () => Promise.all( nodes.map( n => n.start( true ) ) ) );
+	after( () => Promise.all( nodes.map( n => n.stop() ) ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
 		follower = nodes.find( node => node.is( 'follower' ) );
+
 		expect( follower ).to.not.be.undefined();
 		expect( leader ).to.not.be.undefined();
 		expect( leader === follower ).to.not.be.true();
+
 		done();
 	} );
 
 	it( 'can be created', done => {
-		levelup = leader.levelup();
+		levelup = leader.levelUp();
+
 		done();
 	} );
 
 	it( 'can set bunch of keys', done => {
-		async.each(
+		Async.each(
 			['a', 'b', 'c'],
 			( key, cb ) => {
 				levelup.put( `key ${key}`, `value ${key}`, cb );
@@ -60,7 +56,7 @@ describe( 'levelup', () => {
 	} );
 
 	it( 'can get a key', done => {
-		async.each( ['a', 'b', 'c'], ( key, cb ) => {
+		Async.each( ['a', 'b', 'c'], ( key, cb ) => {
 			levelup.get( `key ${key}`, ( err, values ) => {
 				expect( err ).to.be.null();
 				expect( values ).to.equal( `value ${key}` );
@@ -94,7 +90,7 @@ describe( 'levelup', () => {
 	} );
 
 	it( 'batch puts were effective', done => {
-		async.map( ['key d', 'key e'], levelup.get.bind( levelup ),
+		Async.map( ['key d', 'key e'], levelup.get.bind( levelup ),
 			( err, results ) => {
 				expect( err ).to.be.null();
 				expect( results ).to.equal( ['value d', 'value e'] );

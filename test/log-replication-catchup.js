@@ -1,16 +1,11 @@
 'use strict';
 
-const lab = exports.lab = require( 'lab' ).script();
-const describe = lab.experiment;
-const before = lab.before;
-const after = lab.after;
-const it = lab.it;
-const expect = require( 'code' ).expect;
+const { experiment: describe, before, after, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
 
-const async = require( 'async' );
-const memdown = require( 'memdown' );
+const MemDown = require( 'memdown' );
 
-const Node = require( '../' );
+const Shell = require( '../' );
 
 describe( 'log replication catchup', () => {
 	let nodes, follower, leader, newNode;
@@ -25,19 +20,16 @@ describe( 'log replication catchup', () => {
 
 	before( done => {
 		nodes = nodeAddresses.map( ( address ) =>
-			Node( address, {
-				db: memdown,
+			Shell( address, {
+				db: MemDown,
 				peers: nodeAddresses.filter( addr => addr !== address )
 			} ) );
 		done();
 	} );
 
 	// start nodes and wait for cluster settling
-	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
-
-	after( done => {
-		async.each( nodes.concat( newNode ), ( node, cb ) => node.stop( cb ), done );
-	} );
+	before( () => Promise.all( nodes.map( node => node.start( true ) ) ) );
+	after( () => Promise.all( nodes.map( node => node.stop() ) ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
@@ -48,29 +40,27 @@ describe( 'log replication catchup', () => {
 		done();
 	} );
 
-	before( done => leader.command( {
+	before( () => leader.command( {
 		type: 'put',
 		key: 'a',
 		value: '1'
-	} ).then( () => done, done ) );
+	} ) );
 
-	before( done => leader.command( {
+	before( () => leader.command( {
 		type: 'put',
 		key: 'b',
 		value: '2'
-	} ).then( () => done, done ) );
+	} ) );
 
-	before( { timeout: 5000 }, done => leader.waitFor( nodeAddresses, done ) );
+	before( { timeout: 5000 }, () => leader.waitFor( nodeAddresses ) );
 
 	before( done => {
-		newNode = Node( newAddress, {
-			db: memdown,
+		newNode = Shell( newAddress, {
+			db: MemDown,
 			peers: nodeAddresses
 		} );
-		newNode.on( 'warning', ( err ) => {
-			throw err;
-		} );
-		newNode.start( done );
+		newNode.on( 'warning', err => { throw err; } );
+		newNode.start().then( () => done(), done );
 	} );
 
 	before( done => {

@@ -1,13 +1,12 @@
 'use strict';
 
-const lab = exports.lab = require( 'lab' ).script();
-const describe = lab.experiment;
-const it = lab.it;
-const expect = require( 'code' ).expect;
+const Net = require( 'net' );
 
-const net = require( 'net' );
+const { experiment: describe, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
+
 const Msgpack = require( 'msgpack5' );
-const async = require( 'async' );
+const Async = require( 'async' );
 
 const Network = require( '../lib/network/passive' );
 
@@ -44,7 +43,7 @@ describe( 'passive network', () => {
 	} );
 
 	it( 'accepts client connections', done => {
-		async.map( clients, setupClient, done );
+		Async.map( clients, setupClient, done );
 	} );
 
 	it( 'accepts a msgpack message from a client', done => {
@@ -80,7 +79,7 @@ describe( 'passive network', () => {
 	} );
 
 	it( 'can send a message and reaches connected client', done => {
-		async.each( clients, ( client, cb ) => {
+		Async.each( clients, ( client, cb ) => {
 			client.decoder.once( 'data', message => {
 				expect( message ).to.equal( {
 					to: client.address,
@@ -147,7 +146,7 @@ describe( 'passive network', () => {
 	} );
 
 	function setupClient( client, cb ) {
-		const conn = net.connect( clientOptions, cb );
+		const conn = Net.connect( clientOptions, cb );
 		const msgpack = Msgpack();
 		const decoder = msgpack.decoder();
 		const encoder = msgpack.encoder();

@@ -1,8 +1,8 @@
 'use strict';
 
-const fork = require( 'child_process' ).fork;
-const path = require( 'path' );
-const split = require( 'split' );
+const { fork } = require( 'child_process' );
+const Path = require( 'path' );
+const Split = require( 'split' );
 
 const channels = ['stdout', 'stderr'];
 
@@ -15,12 +15,12 @@ class Node {
 
 	start( done ) {
 		const args = [this._address, JSON.stringify( this._options )];
-		this._child = fork( path.join( __dirname, 'server.js' ), args, {
+		this._child = fork( Path.join( __dirname, 'server.js' ), args, {
 			silent: true
 		} );
 
 		channels.forEach( channel => {
-			this._child[channel].pipe( split() )
+			this._child[channel].pipe( Split() )
 				.on( 'data', line => {
 					line = line.trim();
 					if ( line ) {
@@ -29,7 +29,7 @@ class Node {
 				} );
 		} );
 
-		this._child.stdout.pipe( split() ).once( 'data', ( line ) => {
+		this._child.stdout.pipe( Split() ).once( 'data', ( line ) => {
 			if ( line.match( /started/ ) ) {
 				done();
 			} else if ( !this._exiting ) {

@@ -1,16 +1,12 @@
 'use strict';
 
-const lab = exports.lab = require( 'lab' ).script();
-const describe = lab.experiment;
-const before = lab.before;
-const after = lab.after;
-const it = lab.it;
-const expect = require( 'code' ).expect;
+const { experiment: describe, before, after, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
 
-const async = require( 'async' );
-const Memdown = require( 'memdown' );
+const Async = require( 'async' );
+const MemDown = require( 'memdown' );
 
-const Node = require( '../' );
+const Shell = require( '../' );
 
 describe( 'log compaction', () => {
 	let nodes, follower, leader, leveldown;
@@ -23,8 +19,8 @@ describe( 'log compaction', () => {
 
 	before( done => {
 		nodes = nodeAddresses.map( ( address ) =>
-			Node( address, {
-				db: Memdown,
+			Shell( address, {
+				db: MemDown,
 				maxLogRetention: 10,
 				peers: nodeAddresses.filter( addr => addr !== address ).concat( newNodeAddress )
 			} ) );
@@ -32,7 +28,7 @@ describe( 'log compaction', () => {
 	} );
 
 	// start nodes and wait for cluster settling
-	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
+	before( () => Promise.all( nodes.map( node => node.start( true ) ) ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
@@ -40,7 +36,7 @@ describe( 'log compaction', () => {
 		expect( follower ).to.not.be.undefined();
 		expect( leader ).to.not.be.undefined();
 		expect( leader === follower ).to.not.be.true();
-		leveldown = leader.leveldown();
+		leveldown = leader.levelDown();
 		done();
 	} );
 
@@ -50,7 +46,7 @@ describe( 'log compaction', () => {
 			items[i] = ( '00' + i ).slice( -3 );
 		}
 
-		async.each( items, ( item, cb ) => leveldown.put( item, item, cb ), done );
+		Async.each( items, ( item, cb ) => leveldown.put( item, item, cb ), done );
 	} );
 
 	it( 'log length was capped', done => {
@@ -59,26 +55,26 @@ describe( 'log compaction', () => {
 	} );
 
 	it( 'waits for consensus with all nodes of cluster', { timeout: 5000 }, done => {
-		leader.waitFor( nodeAddresses ).then( done, done );
+		leader.waitFor( nodeAddresses ).then( () => done(), done );
 	} );
 
 	describe( 'adding node after reaching consensus', () => {
 		let newNode;
 
 		before( done => {
-			newNode = Node( newNodeAddress, {
-				db: Memdown,
+			newNode = Shell( newNodeAddress, {
+				db: MemDown,
 				maxLogRetention: 10,
 				peers: nodeAddresses
 			} );
 			done();
 		} );
 
-		after( done => async.each( nodes.concat( newNode ), ( node, cb ) => node.stop( cb ), done ) );
+		after( done => Async.each( nodes.concat( newNode ), ( node, cb ) => node.stop().then( () => cb(), cb ), done ) );
 
 		it( 'waits for new node to catch up with cluster', { timeout: 5000 }, done => {
 			newNode.on( 'up-to-date', done );
-			newNode.start( () => {} );
+			newNode.start();
 		} );
 
 		it( 'ensures added node has caught up', done => {
@@ -96,18 +92,18 @@ describe( 'log compaction', () => {
 
 		it( 'accepts more entries', { timeout: 10000 }, done => {
 			leader = nodes.concat( newNode ).find( node => node.is( 'leader' ) );
-			leveldown = leader.leveldown();
+			leveldown = leader.levelDown();
 
 			const items = [];
 			for ( let i = 30; i < 60; i++ ) {
 				items.push( ( '00' + i ).slice( -3 ) );
 			}
 
-			async.each( items, ( item, cb ) => leveldown.put( item, item, cb ), done );
+			Async.each( items, ( item, cb ) => leveldown.put( item, item, cb ), done );
 		} );
 
-		it( 'waits for consensus of added node', { timeout: 5000 }, done => {
-			leader.waitFor( newNodeAddress ).then( done, done );
+		it( 'waits for consensus of added node', { timeout: 5000 }, () => {
+			return leader.waitFor( newNodeAddress );
 		} );
 
 		it( 'includes consensus on added entries at added node', done => {

@@ -1,11 +1,10 @@
 'use strict';
 
-const Lab = exports.lab = require( 'lab' ).script();
+const { experiment: describe, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
 
 const MockUps = require( '../lib/utils/mockups' );
 
-const { experiment: describe, it } = Lab;
-const expect = require( 'code' ).expect;
 
 const {
 	hasOutputOnStdError: hasStdError,

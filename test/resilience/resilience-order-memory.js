@@ -1,10 +1,6 @@
 'use strict';
 
-const lab = exports.lab = require( 'lab' ).script();
-const describe = lab.experiment;
-const before = lab.before;
-const after = lab.after;
-const it = lab.it;
+const { experiment: describe, before, after, it } = exports.lab = require( 'lab' ).script();
 
 const Setup = require( './setup' );
 const Client = require( './setup/client' );

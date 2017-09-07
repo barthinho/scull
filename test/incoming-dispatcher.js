@@ -1,9 +1,7 @@
 'use strict';
 
-const lab = exports.lab = require( 'lab' ).script();
-const describe = lab.experiment;
-const it = lab.it;
-const expect = require( 'code' ).expect;
+const { experiment: describe, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
 
 const Dispatcher = require( '../lib/incoming-dispatcher' );
 

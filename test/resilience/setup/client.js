@@ -1,12 +1,13 @@
 'use strict';
 
-// const keys = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'x', 'y', 'z'];
-const keys = ['a'];
-const Multiaddr = require( 'multiaddr' );
-const Wreck = require( 'wreck' );
-const once = require( 'once' );
 const EventEmitter = require( 'events' );
 
+const Multiaddr = require( 'multiaddr' );
+const Wreck = require( 'wreck' );
+const Once = require( 'once' );
+
+// const keys = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'x', 'y', 'z'];
+const keys = ['a'];
 const defaultOptions = {
 	duration: 60000,
 	retryTimeout: 500
@@ -37,7 +38,7 @@ function Client( nodes, _options ) {
 	let leader;
 
 	return function client( _done ) {
-		const done = once( callback );
+		const done = Once( callback );
 		timeout = setTimeout( done, options.duration );
 		work( done );
 		return emitter;

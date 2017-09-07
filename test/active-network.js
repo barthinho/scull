@@ -1,16 +1,14 @@
 'use strict';
 
-const lab = exports.lab = require( 'lab' ).script();
-const describe = lab.experiment;
-const before = lab.before;
-const it = lab.it;
-const expect = require( 'code' ).expect;
+const { experiment: describe, before, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
 
-const async = require( 'async' );
-const Address = require( '../lib/data/address' );
 const Net = require( 'net' );
+
+const Async = require( 'async' );
 const Msgpack = require( 'msgpack5' );
 
+const Address = require( '../lib/data/address' );
 const Network = require( '../lib/network/active' );
 
 const serverAddresses = [
@@ -44,7 +42,7 @@ describe( 'active network', () => {
 	before( done => {
 		let lindex = -1;
 
-		async.mapSeries( serverAddresses, ( addr, cb ) => {
+		Async.mapSeries( serverAddresses, ( addr, cb ) => {
 			const index = ++lindex;
 			const maddr = Address( addr );
 			const server = Net.createServer( onServerConnection );

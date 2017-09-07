@@ -18,7 +18,7 @@ if ( !options.persist ) {
 
 const node = new Node( address, options );
 node.on( 'warning', err => { throw err; } );
-const db = node.leveldown();
+const db = node.levelDown();
 
 const server = http.createServer( function( req, res ) {
 	const key = req.url.substring( 1 );
@@ -46,7 +46,7 @@ function handleReadRequest( key, res ) {
 	db.get( key, handlingError( key, res ) );
 }
 
-async.parallel( [server.listen.bind( server, port + 1 ), node.start.bind( node )], err => {
+async.parallel( [server.listen.bind( server, port + 1 ), cb => node.start.then( () => cb(), cb )], err => {
 	if ( err ) {
 		throw err;
 	} else {

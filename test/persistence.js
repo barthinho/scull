@@ -1,16 +1,12 @@
 'use strict';
 
-const lab = exports.lab = require( 'lab' ).script();
-const describe = lab.experiment;
-const before = lab.before;
-const after = lab.after;
-const it = lab.it;
-const expect = require( 'code' ).expect;
+const { experiment: describe, before, after, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
 
-const async = require( 'async' );
-const Memdown = require( 'memdown' );
+const Async = require( 'async' );
+const MemDown = require( 'memdown' );
 
-const Node = require( '../' );
+const Shell = require( '../' );
 
 describe( 'persistence', () => {
 
@@ -22,21 +18,21 @@ describe( 'persistence', () => {
 	];
 
 	before( done => {
-		nodes = nodeAddresses.map( address => Node( address, {
-			db: Memdown,
+		nodes = nodeAddresses.map( address => Shell( address, {
+			db: MemDown,
 			peers: nodeAddresses.filter( addr => addr !== address )
 		} ) );
 		done();
 	} );
 
 	// start nodes and wait for cluster settling
-	before( done => async.each( nodes, ( node, cb ) => node.start( () => node.once( 'elected', () => cb() ) ), done ) );
+	before( () => Promise.all( nodes.map( node => node.start( true ) ) ) );
 
 	before( done => {
 		leader = nodes.find( node => node.is( 'leader' ) );
 		expect( leader ).to.not.be.undefined();
-		leveldown = leader.leveldown();
-		term = leader.term();
+		leveldown = leader.levelDown();
+		term = leader.term;
 		done();
 	} );
 
@@ -45,26 +41,23 @@ describe( 'persistence', () => {
 		for ( let i = 0; i < 30; i++ ) {
 			items.push( ( '00' + i ).slice( -3 ) );
 		}
-		async.each( items, ( item, cb ) => { leveldown.put( item, item, cb ); }, done );
+		Async.each( items, ( item, cb ) => { leveldown.put( item, item, cb ); }, done );
 	} );
 
-	before( { timeout: 4000 }, done => async.each( nodes, ( node, cb ) => node.stop( cb ), done ) );
+	before( { timeout: 4000 }, done => Async.each( nodes, ( node, cb ) => node.stop().then( () => cb(), cb ), done ) );
 
 	before( done => {
 		// restart nodes
 		nodes = nodeAddresses.map( ( address ) =>
-			Node( address, {
-				db: Memdown,
+			Shell( address, {
+				db: MemDown,
 				peers: nodeAddresses.filter( addr => addr !== address )
 			} ) );
 		done();
 	} );
 
-	before( done => async.each( nodes, ( node, cb ) => node.start( cb ), done ) );
-
-	after( done => {
-		async.each( nodes, ( node, cb ) => node.stop( cb ), done );
-	} );
+	before( () => Promise.all( nodes.map( node => node.start() ) ) );
+	after( () => Promise.all( nodes.map( node => node.stop() ) ) );
 
 	it( 'retains logs and other metadata', done => {
 		const expected = items.map( ( item, index ) => {

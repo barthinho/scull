@@ -1,11 +1,11 @@
 'use strict';
 
-const async = require( 'async' );
-const path = require( 'path' );
-const rimraf = require( 'rimraf' );
-const mkdirp = require( 'mkdirp' );
+const Async = require( 'async' );
+const Path = require( 'path' );
+const Rimraf = require( 'rimraf' );
+const Mkdirp = require( 'mkdirp' );
 
-const Node = require( './node' );
+const Shell = require( './node' );
 
 const defaultOptions = {
 	persist: false,
@@ -20,23 +20,23 @@ function Setup( _options ) {
 	const allAddresses = [];
 	const options = Object.assign( {}, defaultOptions, _options );
 	const maxDeadNodes = Math.ceil( options.nodeCount / 2 ) - 1;
-	const dataPath = path.join( __dirname, '..', 'resilience', 'data' );
+	const dataPath = Path.join( __dirname, '..', 'resilience', 'data' );
 
 	let killing = true;
 
 	return { before, after, addresses: allAddresses };
 
 	function before( done ) {
-		async.series( [setupDirs, createNodes, startNodes, startKiller], done );
+		Async.series( [setupDirs, createNodes, startNodes, startKiller], done );
 	}
 
 	function after( done ) {
-		async.series( [stopKiller, stopNodes], done );
+		Async.series( [stopKiller, stopNodes], done );
 	}
 
 	function setupDirs( done ) {
-		rimraf.sync( dataPath );
-		mkdirp.sync( dataPath );
+		Rimraf.sync( dataPath );
+		Mkdirp.sync( dataPath );
 		done();
 	}
 
@@ -48,7 +48,7 @@ function Setup( _options ) {
 
 		ports.map( portToAddress ).forEach( address => allAddresses.push( address ) );
 
-		liveNodes = ports.map( port => new Node( port, {
+		liveNodes = ports.map( port => new Shell( port, {
 			peers: ports.filter( p => p !== port ).map( portToAddress ),
 			persist: options.persist
 		} ) );
@@ -57,7 +57,7 @@ function Setup( _options ) {
 	}
 
 	function startNodes( done ) {
-		async.each( liveNodes, ( node, cb ) => node.start( cb ), done );
+		Promise.all( liveNodes.map( n => n.start() ) ).then( () => done(), done );
 	}
 
 	function startKiller( done ) {
@@ -95,17 +95,17 @@ function Setup( _options ) {
 		const node = popRandomLiveNode();
 		console.log( 'killing %s...', node._address );
 		deadNodes.push( node._address );
-		node.stop( cb );
+		node.stop().then( () => cb(), cb );
 	}
 
 	function reviveOne( cb ) {
 		const address = randomDeadNode();
 		console.log( 'reviving %s...', address );
-		const node = new Node( address, {
+		const node = new Shell( address, {
 			peers: allAddresses.filter( addr => addr !== address )
 		} );
 		liveNodes.push( node );
-		node.start( cb );
+		node.start().then( () => cb(), cb );
 	}
 
 	function popRandomLiveNode() {
@@ -128,7 +128,7 @@ function Setup( _options ) {
 	}
 
 	function stopNodes( done ) {
-		async.each( liveNodes, ( node, cb ) => node.stop( cb ), done );
+		Async.each( liveNodes, ( node, cb ) => node.stop().then( () => cb(), cb ), done );
 	}
 }
 

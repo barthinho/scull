@@ -1,13 +1,12 @@
 'use strict';
 
-const Lab = exports.lab = require( 'lab' ).script();
+const { experiment: describe, before, beforeEach, afterEach, it } = exports.lab = require( 'lab' ).script();
+const { expect } = require( 'code' );
 
 const { generateShell, generateNode } = require( '../lib/utils/mockups' );
 
 const Log = require( '../lib/log' );
 
-const { experiment: describe, before, beforeEach, afterEach, it } = Lab;
-const expect = require( 'code' ).expect;
 
 
 describe( 'log controller', () => {
@@ -22,11 +21,7 @@ describe( 'log controller', () => {
 		done();
 	} );
 
-	afterEach( done => {
-		log.node.stop();
-
-		done();
-	} );
+	afterEach( done => log.node.stop().then( () => done(), done ) );
 
 
 	it( 'can be created w/o custom options', done => {
