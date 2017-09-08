@@ -144,6 +144,8 @@ class Shell extends EventEmitter {
 				throw new Error( 'must not start while stopping node' );
 			}
 
+			this._elected = new Promise( resolve => this.node.once( 'elected', () => resolve() ) );
+
 			this._started = new Promise( ( resolve, reject ) => {
 				const id = this.id;
 
@@ -189,22 +191,7 @@ class Shell extends EventEmitter {
 			} );
 		}
 
-		if ( waitForElectionPassed ) {
-			if ( !this._elected ) {
-				this._elected = this._started
-					.then( () => new Promise( resolve => {
-						this.node.once( 'elected', () => {
-							Debug( '%s: election passed after starting', this.id );
-
-							resolve();
-						} );
-					} ) );
-			}
-
-			return this._elected;
-		}
-
-		return this._started;
+		return waitForElectionPassed ? this._elected : this._started;
 	}
 
 	/**
@@ -214,6 +201,8 @@ class Shell extends EventEmitter {
 	 */
 	stop() {
 		if ( !this._stopping ) {
+			Debug( '%s: stopping node', this.id );
+
 			if ( !this._started ) {
 				return Promise.resolve();
 			}
