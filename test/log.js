@@ -21,7 +21,7 @@ describe( 'log controller', () => {
 		done();
 	} );
 
-	afterEach( done => log.node.stop().then( () => done(), done ) );
+	afterEach( done => { log.node.stop(); done(); } );
 
 
 	it( 'can be created w/o custom options', done => {
