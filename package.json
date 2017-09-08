@@ -1,6 +1,6 @@
 {
   "name": "scull",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Raft for Node.js",
   "main": "shell.js",
   "scripts": {
@@ -23,14 +23,11 @@
     "consensus",
     "leveldb"
   ],
-  "author": "pgte",
-  "contributors": [
-    {
-      "name": "Thomas Urban",
-      "email": "thomas.urban@cepharum.de",
-      "url": "https://cepharum.de"
-    }
-  ],
+  "author": {
+    "name": "Thomas Urban",
+    "email": "thomas.urban@cepharum.de",
+    "url": "https://cepharum.de"
+  },
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/hitchyjs/scull/issues"
