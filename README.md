@@ -89,7 +89,7 @@ Creates a new `Shell` for controlling local node in cluster.
 
  > (You can use this to create a in-memory database using [Memdown](https://github.com/Level/memdown#readme))
 
-* #### Advanced options
+#### Advanced options
 
   * `appendEntriesIntervalMS` (integer, defaults to `100`): The interval (ms) with which a leader sends `AppendEntries` messages to the followers (ping).
   * `electionTimeoutMinMS` (integer, defaults to `300`): The minimum election timeout (ms) for a node. It's the minimum time a node has to wait until no `AppendEntries` message triggers an election.
