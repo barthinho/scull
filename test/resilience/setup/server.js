@@ -46,7 +46,7 @@ function handleReadRequest( key, res ) {
 	db.get( key, handlingError( key, res ) );
 }
 
-async.parallel( [server.listen.bind( server, port + 1 ), cb => node.start.then( () => cb(), cb )], err => {
+async.parallel( [server.listen.bind( server, port + 1 ), cb => node.start().then( () => cb(), cb )], err => {
 	if ( err ) {
 		throw err;
 	} else {
