@@ -4,6 +4,7 @@ npm-debug.log
 coverage
 data
 !lib/data
+!test/data
 Vagrantfile
 .vagrant
 .idea
