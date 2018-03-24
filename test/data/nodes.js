@@ -81,6 +81,14 @@ suite( "Manager for pool of nodes", () => {
 		( () => new Nodes( [], Address( "/ip4/127.0.0.1/tcp/5" ) ) ).should.not.throw();
 	} );
 
+	test( "exposes additionally provided and normalized address of local node in property `local`", () => {
+		Should( new Nodes().local ).be.null();
+		Should( new Nodes( [] ).local ).be.null();
+
+		new Nodes( [], "/ip4/127.0.0.1/tcp/1" ).local.should.not.be.null();
+		new Nodes( [], "/ip4/127.0.0.1/tcp/1" ).local.should.be.instanceOf( Address.Address ).which.has.property( "id" ).which.is.equal( "/ip4/127.0.0.1/tcp/1" );
+	} );
+
 	test( "does not expose provided address of local node w/ list of currently valid nodes' addresses", () => {
 		const addresses = [
 			"/ip4/127.0.0.1/tcp/1",
@@ -234,10 +242,7 @@ suite( "Manager for pool of nodes", () => {
 
 			pool.remove( "/ip4/127.0.0.1/tcp/1" );
 
-			setTimeout( () => {
-				pool.addresses.should.have.length( 1 );
-				resolve();
-			}, 100 );
+			setTimeout( resolve, 100 );
 		} );
 	} );
 } );
