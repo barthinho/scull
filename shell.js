@@ -1,23 +1,21 @@
-'use strict';
+"use strict";
 
-const EventEmitter = require( 'events' );
+const EventEmitter = require( "events" );
 
-const Debug = require( 'debug' )( 'skiff.shell' );
-const Merge = require( 'deepmerge' );
-const LevelUp = require( 'levelup' );
+const Debug = require( "debug" )( "scull.shell" );
+const LevelUp = require( "levelup" );
 
-const Connections = require( './lib/data/connections' );
-const Address = require( './lib/data/address' );
-const Network = require( './lib/network' );
-const IncomingDispatcher = require( './lib/incoming-dispatcher' );
-const Node = require( './lib/node' );
-const CommandQueue = require( './lib/command-queue' );
-const Commands = require( './lib/commands' );
-const DB = require( './lib/db' );
-const LevelDown = require( './lib/leveldown' );
-const Iterator = require( './lib/iterator' );
+const { deepMerge } = require( "./lib/utils/object" );
+const Address = require( "./lib/data/address" );
+const Network = require( "./lib/network" );
+const Node = require( "./lib/node" );
+const Commands = require( "./lib/commands" );
+const DB = require( "./lib/db" );
+const LevelDown = require( "./lib/leveldown" );
+const Iterator = require( "./lib/iterator" );
 
-const defaultOptions = require( './lib/default-options' );
+
+const DEFAULT_OPTIONS = require( "./lib/default-options" );
 
 /**
  * Lists names of events of wrapped node controller to be forwarded and exposed
@@ -25,107 +23,122 @@ const defaultOptions = require( './lib/default-options' );
  *
  * @type {string[]}
  */
-const importantNodeEvents = [
-	'warning',
-	'new state',
-	'heartbeat timeout',
-	'leader',
-	'rpc latency',
-	'joined',
-	'left',
-	'electing',
-	'elected',
-	'new leader',
-	'up-to-date',
+const IMPORTANT_NODE_EVENTS = [
+	"warning",
+	"new state",
+	"heartbeat timeout",
+	"leader",
+	"rpc latency",
+	"joined",
+	"left",
+	"electing",
+	"elected",
+	"new leader",
+	"up-to-date"
 ];
 
 
 /**
  * Implements shell exposing public API for controlling single node in cluster.
  *
- * @type {Shell}
  * @name Shell
- * @property {Address} id
- * @property {object<string,*>} options
- * @property {DB} db
- * @property {Dispatcher} dispatcher
- * @property {Node} node
- * @property {Connections} connections
- * @property {CommandQueue} commandQueue
- * @property {Commands} commands
+ * @extends EventEmitter
  */
 class Shell extends EventEmitter {
 	/**
 	 * @param {string|Address} id unique ID a.k.a. network address of node
-	 * @param {object<string,*>} options
+	 * @param {object<string,*>} options options
 	 */
 	constructor( id, options = {} ) {
 		super();
 
 		id = Address( id );
-		options = Object.freeze( Merge( defaultOptions, options || {} ) );
+		options = Object.freeze( deepMerge( {}, DEFAULT_OPTIONS, options || {} ) );
 
-		Debug( 'creating node %s with peers %j', id, options.peers );
+		Debug( "creating node %s with peers %j", id, options.peers );
 
 		Object.defineProperties( this, {
+			/**
+			 * Provides address of node uniquely identifying it.
+			 *
+			 * @property {Address} id
+			 * @readonly
+			 */
 			id: { value: id },
-			options: { value: options },
+
+			/**
+			 * Describes node's customizations.
+			 *
+			 * @property {object<string,*>} options
+			 * @readonly
+			 */
+			options: { value: options }
 		} );
 
+
 		const db = new DB( options.location, id, options.db, options.levelup );
-		const dispatcher = new IncomingDispatcher( { id } );
-		const connections = new Connections( this, options.peers );
-		const node = new Node( id, connections, dispatcher, db, this.peers.bind( this ), options );
-		const commandQueue = new CommandQueue();
-		const commands = new Commands( id, commandQueue, node );
+		const node = new Node( id, db, options );
+		const commands = new Commands( node );
 
 		Object.defineProperties( this, {
+			/**
+			 * Refers to node's LevelDB instance.
+			 *
+			 * @property {DB} db
+			 * @readonly
+			 */
 			db: { value: db },
-			dispatcher: { value: dispatcher },
+
+			/**
+			 * Exposes reference on managed node itself.
+			 *
+			 * @property {Node} node
+			 * @readonly
+			 */
 			node: { value: node },
-			connections: { value: connections },
-			commandQueue: { value: commandQueue },
+
+			/**
+			 * @property {Connections} connections
+			 * @readonly
+			 */
+			connections: { value: node.connections },
+
+			/**
+			 * Manages writable queue of pending commands.
+			 *
+			 * @property {CommandQueue} commandQueue
+			 * @readonly
+			 */
+			commandQueue: { value: commands.queue },
+
+			/**
+			 * @property {Commands} commands
+			 * @readonly
+			 */
 			commands: { value: commands },
-			term: { get: () => node.term },
+
+			/**
+			 * Exposes current term of node.
+			 *
+			 * The node's term is an essential information in raft consensus
+			 * protocol indicating what era of succeeding leaderships this node
+			 * expects to be in. If any node in cluster is indicating a later
+			 * era by using a higher term value this node is considering itself
+			 * outdated.
+			 *
+			 * @property {int} term
+			 * @readonly
+			 */
+			term: { get: () => node.term }
 		} );
 
 
 		this._implicitNetwork = false;
-		this._startState = 'stopped';
-
-
-		// keep tracking stats on current node
-		const stats = this._stats = {
-			messagesReceived: 0,
-			messagesSent: 0,
-			rpcSent: 0,
-			rpcReceived: 0,
-			rpcReceivedByType: {
-				'AppendEntries': 0,
-				'RequestVote': 0,
-				'InstallSnapshot': 0
-			},
-			rpcSentByType: {
-				'AppendEntries': 0,
-				'RequestVote': 0,
-				'InstallSnapshot': 0
-			}
-		};
-
-		node.on( 'message received', () => stats.messagesReceived++ );
-		node.on( 'message sent', () => stats.messagesSent++ );
-		node.on( 'rpc sent', type => {
-			stats.rpcSent++;
-			stats.rpcSentByType[type]++;
-		} );
-		node.on( 'rpc received', type => {
-			stats.rpcReceived++;
-			stats.rpcReceivedByType[type]++;
-		} );
+		this._startState = "stopped";
 
 
 		// propagate events of wrapped instanceof Node
-		importantNodeEvents.forEach( event => node.on( event, this.emit.bind( this, event ) ) );
+		IMPORTANT_NODE_EVENTS.forEach( event => node.on( event, this.emit.bind( this, event ) ) );
 	}
 
 
@@ -141,51 +154,54 @@ class Shell extends EventEmitter {
 	start( waitForElectionPassed = false ) {
 		if ( !this._started ) {
 			if ( this._stopping ) {
-				throw new Error( 'must not start while stopping node' );
+				throw new Error( "must not start while stopping node" );
 			}
 
-			this._elected = new Promise( resolve => this.node.once( 'elected', () => resolve() ) );
+			this._elected = new Promise( resolve => {
+				this.node.once( "elected", () => resolve() );
+			} );
 
 			this._started = new Promise( ( resolve, reject ) => {
 				const id = this.id;
 
-				Debug( '%s: start state is %s', id, this._startState );
+				Debug( "%s: start state is %s", id, this._startState );
 
 				switch ( this._startState ) {
-					case 'stopped' :
-						this._startState = 'starting';
+					case "stopped" :
+						this._startState = "starting";
 
-						Debug( 'starting node %s', id );
+						Debug( "starting node %s", id );
 
 						Promise.all( [
 							this._startNetwork(),
-							this._loadPersistedState(),
+							this._loadPersistedState()
 						] )
 							.then( () => {
-								Debug( '%s: done starting', id );
+								Debug( "%s: done starting", id );
 
-								this.node.transition( 'follower' );
+								this.node.transition( "follower" );
 
-								this._startState = 'started';
-								this.emit( 'started' );
+								this._startState = "started";
+								this.emit( "started" );
 							}, error => {
-								Debug( '%s: starting failed', id );
+								Debug( "%s: starting failed", id );
 
-								this.node.transition( 'follower' );
+								this.node.transition( "follower" );
 
-								this._startState = 'stopped';
+								this._startState = "stopped";
 
 								throw error;
 							} )
-							.then( resolve, reject );
+							.then( resolve )
+							.catch( reject );
 						break;
 
-					case 'started' :
+					case "started" :
 						resolve();
 						break;
 
-					case 'starting' :
-						this.once( 'started', () => resolve() );
+					case "starting" :
+						this.once( "started", () => resolve() );
 						break;
 				}
 			} );
@@ -201,44 +217,42 @@ class Shell extends EventEmitter {
 	 */
 	stop() {
 		if ( !this._stopping ) {
-			Debug( '%s: stopping node', this.id );
+			Debug( "%s: stopping node", this.id );
 
 			if ( !this._started ) {
 				return Promise.resolve();
 			}
 
-			this._stopping = new Promise( resolve => {
+			this._stopping = new Promise( ( resolve, reject ) => {
 				this.node.stop();
 				this.connections.stop();
 
-				this._startState = 'stopped';
+				this._startState = "stopped";
 
 				if ( this._network ) {
-					this.emit( 'finish', this._network );
+					this.emit( "finish", this._network );
 
 					this._network = undefined;
 
-					if ( this._implicitNetwork ) {
-						this._implicitNetwork.active.end();
-						this._implicitNetwork.passive.emit( 'finish' );
-
-						let open = !this._implicitNetwork.passive._server.close;
-
-						if ( open ) {
-							this._implicitNetwork.passive.once( 'closed', () => resolve() );
-						}
+					const { _implicitNetwork } = this;
+					if ( _implicitNetwork ) {
+						const { transmitting, receiving } = _implicitNetwork;
 
 						this._implicitNetwork = undefined;
 
-						if ( open ) {
-							return;
-						}
+						transmitting.end();
+						receiving.end();
+
+						receiving.server.onStopped.then( resolve ).catch( reject );
+						return;
 					}
 				}
 
 				resolve();
 			} )
-				.then( () => this._started = this._elected = this._stopping = undefined );
+				.then( () => {
+					this._started = this._elected = this._stopping = undefined;
+				} );
 		}
 
 		return this._stopping;
@@ -251,63 +265,67 @@ class Shell extends EventEmitter {
 	 */
 	_startNetwork() {
 		return new Promise( resolve => {
-			const network = this._getNetworkConstructors();
-			const node = this.node;
+			const address = this.id.toSocketOptions();
 
-			const server = network.passive.node( this.id );
-			const client = network.active.node( this.id );
+			let network = this.options.network;
+			if ( network ) {
+				if ( !network.isPrepared() ) {
+					throw new TypeError( "provided network is not prepared" );
+				}
+			} else {
+				this._implicitNetwork = network = Network.createNetwork( this.id, {
+					receiving: {
+						server: deepMerge( {}, address, this.options.server ),
+					}
+				} );
+			}
 
-			this._network = { active: client, passive: server };
+
+			const { receiving, transmitting } = network;
+			const { node } = this;
+
+			receiving.assignNodes( node.peers );
+			transmitting.assignNodes( node.peers );
+
+			const server = receiving.node( this.id );
+			const client = transmitting.node( this.id );
+
+			this._network = { transmitting, receiving };
 
 			// pipe all incoming messages into dispatcher bound to wrapped node
 			// - on receiving requests
-			server.pipe( this.dispatcher, { end: false } );
+			server.pipe( this.node.requestDispatcher, { end: false } );
 			// - on receiving responses
-			client.pipe( this.dispatcher, { end: false } );
+			client.pipe( this.node.replyDispatcher, { end: false } );
 
 			// pipe output streams of wrapped node into network sockets for actual
 			// transmission
-			node.requestOut.pipe( client, { end: false } );
+			node.requestOut.pipe( transmitting, { end: false } );
 			node.responseOut.pipe( server, { end: false } );
 
 
 			// expose connection state events on client-side socket
-			const _boundConnect = this.emit.bind( this, 'connect' );
-			const _boundDisconnect = this.emit.bind( this, 'disconnect' );
+			const _boundConnect = this.emit.bind( this, "connect" );
+			const _boundDisconnect = this.emit.bind( this, "disconnect" );
 
-			client.on( 'connect', _boundConnect );
-			client.on( 'disconnect', _boundDisconnect );
+			transmitting.on( "connect", _boundConnect );
+			transmitting.on( "disconnect", _boundDisconnect );
 
-			this.once( 'finish', network => {
-				network.active.removeListener( 'connect', _boundConnect );
-				network.active.removeListener( 'disconnect', _boundDisconnect );
+			this.once( "finish", () => {
+				transmitting.removeListener( "connect", _boundConnect );
+				transmitting.removeListener( "disconnect", _boundDisconnect );
 			} );
 
 
-			if ( network.passive.listening() ) {
-				resolve();
+			if ( network.receiving.isListening ) {
+				resolve( network );
 			} else {
-				network.passive.once( 'listening', () => resolve() );
+				network.receiving.once( "listening", () => resolve( network ) );
 			}
-		} );
-	}
-
-	_getNetworkConstructors() {
-		const address = this.id.nodeAddress();
-
-		let network = this.options.network;
-		if ( !network ) {
-			this._implicitNetwork = network = Network( {
-				passive: {
-					server: Merge( {
-						port: address.port,
-						host: address.address
-					}, this.options.server )
-				}
+		} )
+			.then( network => {
+				this.node.emit( "network attached", network );
 			} );
-		}
-
-		return network;
 	}
 
 	/**
@@ -317,7 +335,7 @@ class Shell extends EventEmitter {
 	_loadPersistedState() {
 		return this.db.load()
 			.then( results => {
-				Debug( '%s: loaded state from persistent database: %j', this.id, results );
+				Debug( "%s: loaded state from persistent database: %j", this.id, results );
 
 				this.node.log.restart( results.log );
 
@@ -344,7 +362,7 @@ class Shell extends EventEmitter {
 	 * @returns {Promise} resolved when finished
 	 */
 	join( address ) {
-		Debug( '%s: joining %s', this.id, address );
+		Debug( "%s: joining %s", this.id, address );
 
 		return this.start().then( () => this.node.join( address ) );
 	}
@@ -356,7 +374,7 @@ class Shell extends EventEmitter {
 	 * @returns {Promise} resolved when finished
 	 */
 	leave( address ) {
-		Debug( '%s: leaving %s', this.id, address );
+		Debug( "%s: leaving %s", this.id, address );
 
 		return this.start().then( () => this.node.leave( address ) );
 	}
@@ -364,23 +382,24 @@ class Shell extends EventEmitter {
 	// ------ Commands
 
 	/**
-	 * Removes node at given address from list of peering nodes in cluster.
+	 * Perform arbitrary command in cluster.
 	 *
 	 * @param {object} command command to execute
 	 * @param {object<string,*>} options options for executing command
 	 * @returns {Promise} resolved when finished
 	 */
 	command( command, options = {} ) {
-		if ( this.is( 'leader' ) ) {
+		if ( this.is( "leader" ) ) {
 			return new Promise( ( resolve, reject ) => {
-				// FIXME obey notes on handling false returned by write() given at https://nodejs.org/dist/latest-v6.x/docs/api/stream.html#stream_writable_write_chunk_encoding_callback
-				this.commandQueue.write( { command, options, callback: ( error, result ) => {
-					if ( error ) {
-						reject( error );
-					} else {
-						resolve( result );
+				this.commandQueue.write( {
+					command, options, callback: ( error, result ) => {
+						if ( error ) {
+							reject( error );
+						} else {
+							resolve( result );
+						}
 					}
-				} } );
+				} );
 			} );
 		}
 
@@ -411,36 +430,62 @@ class Shell extends EventEmitter {
 
 	// ------- State
 
+	/**
+	 * Detects if current node is in selected state.
+	 *
+	 * @param {string} state one out of "leader", "follower", "candidate" or "weakened"
+	 * @returns {boolean} indicates if node is in selected state currently
+	 */
 	is( state ) {
 		return this.node.is( state );
 	}
 
+	/**
+	 * Weakens node for duration given in milliseconds.
+	 *
+	 * @param {number} duration number of milliseconds to weaken node for
+	 * @returns {void}
+	 */
 	weaken( duration ) {
 		this.node.weaken( duration );
 	}
 
 	// -------- Level*
 
+	/**
+	 * Fetches LevelDOWN API for accessing state machine of cluster through this
+	 * node.
+	 *
+	 * @returns {*} LevelDOWN API
+	 */
 	levelDown() {
-		return new LevelDown( this );
+		return new LevelDown( this.node, options => new Iterator( this, this.db.state, options ) );
 	}
 
+	/**
+	 * Fetches LevelUP API for accessing state machine of cluster through this
+	 * node.
+	 *
+	 * @param {object} options options
+	 * @returns {*} LevelUP API
+	 */
 	levelUp( options ) {
 		return LevelUp( this.id, Object.assign( {}, {
-			db: this.levelDown.bind( this ),
-			valueEncoding: 'json'
+			db: () => this.levelDown(),
+			valueEncoding: "json"
 		}, options ) );
-	}
-
-	iterator( options ) {
-		return new Iterator( this, this.db.state, options );
 	}
 
 
 	// -------- Stats
 
+	/**
+	 * Fetches statistical information on current node's network activities.
+	 *
+	 * @returns {NodeStats} provides counters regarding current node's activity
+	 */
 	stats() {
-		return this._stats;
+		return this.node.stats;
 	}
 
 	/**
@@ -450,18 +495,30 @@ class Shell extends EventEmitter {
 	 * @returns {Promise<Array>} resolved with list of peers
 	 */
 	peers() {
-		return this.node.fetchPeers( this._network );
+		return this.node.fetchPeers();
 	}
 
+	/**
+	 * Fetches current entries of this node's backlog of actions to control
+	 * cluster's state.
+	 *
+	 * @returns {LogEntry[]} lists recent log entries of local node
+	 */
 	logEntries() {
 		return this.node.log.entries;
 	}
 }
 
+/**
+ * Creates manager for controlling single node of raft consensus cluster.
+ *
+ * @param {string|Address} id node's address (serving as its ID, too)
+ * @param {object} options customizing options
+ * @returns {Shell} created manager instance
+ */
 module.exports = function createNodeShell( id, options = {} ) {
 	return new Shell( id, options );
 };
 
-module.exports.createNetwork = function createNetwork( options = {} ) {
-	return Network( options );
-};
+module.exports.Shell = Shell;
+module.exports.createNetwork = Network.createNetwork;

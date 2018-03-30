@@ -182,9 +182,9 @@ This static method - it's no method of shell created before - creates a network 
 
 Options:
 
-* `active` (object):
+* `transmitting` (object):
   * `inactivityTimeout` (integer, milliseconds, defaults to `5000`): The amount of time to wait before a client connection is closed because of inactivity.
-* `passive` (object):
+* `receiving` (object):
   * `server` (object):
     * `port` (integer, defaults to `9163`): the port the server should listen on
     * `host` (string, defaults to `"0.0.0.0"`): the interface address the server should listen to

@@ -8,3 +8,4 @@ data
 Vagrantfile
 .vagrant
 .idea
+.nyc_output
