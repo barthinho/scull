@@ -839,34 +839,26 @@ suite( "A transmitting network", () => {
 			} );
 		} );
 
-		test( "allows peer to disconnect", done => {
+		test( "allows peer to disconnect", () => {
 			const peerZero = REMOTE_ADDRESSES[0];
 
 			// drop all previously captured data to prepare upcoming tests
 			[ 0, 1, 2 ]
 				.forEach( i => capturedData[i].splice( 0, capturedData[i].length ) );
 
-			network.node( peerZero );
+			const stream = network.connection( peerZero ).stream;
 
-			const connection = network.connection( peerZero );
+			stream.isConnected.should.be.true();
 
-			connection.once( "disconnect", done );
-			connection._socket.disconnect();
+			stream.disconnect();
+
+			return new Promise( resolve => stream.once( "disconnect", resolve ) )
+				.then( () => {
+					stream.isConnected.should.be.false();
+				} );
 		} );
 
-		test( "is silently failing on sending a message while trying to reconnect", () => {
-			const peerZero = REMOTE_ADDRESSES[0];
-
-			network.node( peerZero );
-
-			return network.write( {
-				from: MY_ADDRESS,
-				to: peerZero,
-				what: "should not have reached you",
-			} );
-		} );
-
-		test( "can still send data to another peer", () => {
+		test( "can still send data to another peer w/o explicitly reconnecting", () => {
 			const peerTwo = REMOTE_ADDRESSES[2];
 
 			return new Promise( resolve => {
@@ -893,10 +885,6 @@ suite( "A transmitting network", () => {
 				} );
 		} );
 
-		test( "isn't delivering message to previously disconnected peer", () => {
-			capturedData[0].should.be.Array().which.is.empty();
-		} );
-
 		test( "is delivering message to different peer no matter the first one has been disconnected", () => {
 			capturedData[2].should.be.Array().which.has.length( 1 );
 
@@ -908,28 +896,15 @@ suite( "A transmitting network", () => {
 				.should.be.true();
 		} );
 
-		test( "waits for previously disconnected node to be connected with again", done => {
-			const peerZero = REMOTE_ADDRESSES[0];
-
-			network.node( peerZero );
-
-			const connection = network.connection( peerZero );
-			if ( connection.isConnected ) {
-				done();
-			}
-
-			connection.on( "reconnect", done );
+		test( "waits for previously disconnected node to be connected with again", () => {
+			return network.connection( REMOTE_ADDRESSES[0] ).stream.getSocket();
 		} );
 
 		test( "can send data to now reconnected peer", () => {
 			const peerZero = REMOTE_ADDRESSES[0];
 
 			return new Promise( resolve => {
-				const node = network.node( MY_ADDRESS );
-
-				network.node( peerZero );
-
-				node.once( "data", resolve );
+				network.node( MY_ADDRESS ).once( "data", resolve );
 
 				network.write( {
 					from: MY_ADDRESS,
