@@ -6,7 +6,7 @@ const Setup = require( "./context/setup" );
 const ResilienceTestClient = require( "./context/client" );
 
 
-suite( "resilience, chaos, in memory", function() {
+suite( "resilience, no chaos, on disk", function() {
 	this.timeout( 30000 );
 
 	const { before, after, addresses } = Setup( {
