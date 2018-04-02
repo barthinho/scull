@@ -104,42 +104,35 @@ class ResilienceTestClient extends EventEmitter {
 		return new Promise( ( resolve, reject ) => {
 			this.timeout = setTimeout( resolve, this.options.duration );
 
-			return this.work().then( resolve, reject );
+			return this.work( error => ( error ? reject( error ) : resolve() ) );
 		} );
 	}
 
 	/**
 	 * Issues requests until configured duration of test run has elapsed.
 	 *
-	 * @returns {Promise} promises duration of test run having elapsed w/o error
+	 * @param {function(?Error)} doneFn callback invoked on error or when done
+	 * @returns {void}
 	 */
-	work() {
-		return new Promise( ( resolve, reject ) => {
-			this.stats.operationsStarted++;
+	work( doneFn ) {
+		this.stats.operationsStarted++;
 
-			this.makeOneRequest()
-				.then( () => {
-					this.emit( "operation" );
-
-					if ( Date.now() - this.created < this.options.duration ) {
-						process.nextTick( () => this.work().then( resolve ).catch( reject ) );
-					} else {
-						clearTimeout( this.timeout );
-						resolve();
-					}
-				} )
-				.catch( err => {
-					reject( err );
-				} );
-
-			this.emit( "operation started" );
-		} )
+		this.makeOneRequest()
 			.then( () => {
+				this.emit( "operation" );
+
 				this.stats.operationsCompleted++;
-			}, error => {
-				this.stats.operationsCompleted++;
-				throw error;
-			} );
+
+				if ( Date.now() - this.created < this.options.duration ) {
+					process.nextTick( () => this.work( doneFn ) );
+				} else {
+					clearTimeout( this.timeout );
+					doneFn();
+				}
+			} )
+			.catch( doneFn );
+
+		this.emit( "operation started" );
 	}
 
 	/**
