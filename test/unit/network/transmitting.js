@@ -103,6 +103,30 @@ suite( "A transmitting network", () => {
 				processors[index]( stream, capturedData[index] );
 			} );
 
+			const connections = [];
+			const trackConnection = socket => {
+				connections.push( socket );
+				socket.once( "close", () => {
+					const found = connections.findIndex( i => i === socket );
+					if ( found > -1 ) {
+						connections.splice( found, 1 );
+					}
+				} );
+			};
+
+			server.on( "connection", trackConnection );
+			server.instantlyClose = () => {
+				return new Promise( resolve => {
+					connections.forEach( socket => {
+						socket.setTimeout( 1 );
+						socket.end();
+					} );
+
+					server.once( "close", resolve );
+					server.close();
+				} );
+			};
+
 			return PromiseUtil.promisify( server.listen, server )( Address( address ).toSocketOptions() )
 				.then( () => server );
 		} )
@@ -988,7 +1012,7 @@ suite( "A transmitting network", () => {
 
 	suite( "can be closed", () => {
 		test( "by ending writable stream of network", () => {
-			const promise = Promise.all( servers.map( server => PromiseUtil.promisify( server.close, server )() ) );
+			const promise = Promise.all( servers.map( server => server.instantlyClose() ) );
 
 			network.end();
 
