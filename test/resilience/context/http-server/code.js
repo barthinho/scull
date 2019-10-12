@@ -26,7 +26,7 @@ const options = Object.assign( {},
 );
 
 if ( !options.persist ) {
-	options.db = MemDown;
+	options.db = MemDown();
 }
 
 
