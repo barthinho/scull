@@ -1,7 +1,7 @@
 "use strict";
 
 const { suite, test, suiteSetup, suiteTeardown } = require( "mocha" );
-const Should = require( "should" ); // eslint-disable-line no-unused-vars
+require( "should" );
 const MemDown = require( "memdown" );
 
 // process.env.DEBUG = "scull.consensus,scull.rpc.traffic";
@@ -36,7 +36,7 @@ suite( "leader election", () => {
 
 		suiteSetup( () => {
 			node = Shell( singleNodeAddress, {
-				db: MemDown,
+				db: MemDown(),
 				peers: []
 			} );
 		} );
@@ -57,7 +57,7 @@ suite( "leader election", () => {
 
 		suiteSetup( () => {
 			nodes = smallClusterAddresses.map( address => Shell( address, {
-				db: MemDown,
+				db: MemDown(),
 				peers: smallClusterAddresses
 			} ) );
 		} );
@@ -67,23 +67,32 @@ suite( "leader election", () => {
 		test( "fails to pass election thus never emits `elected`-event on started node", function( done ) {
 			this.timeout( 5000 );
 
-			nodes[0].once( "elected", () => done( new Error( "got elected unexpectedly" ) ) );
-			setTimeout( done, 4000 );
+			const cb = () => done( new Error( "got elected unexpectedly" ) );
+
+			nodes[0].once( "elected", cb );
+
+			setTimeout( () => {
+				nodes[0].off( "elected", cb );
+				done();
+			}, 4000 );
 		} );
 
 		test( "didn't elect started node to be leader", () => {
 			nodes[0].is( "leader" ).should.be.false();
 		} );
 
-		suiteTeardown( "stops cluster", () => nodes[0].stop() );
+		suiteTeardown( "stops cluster", () => {
+			return Promise.all( nodes.map( ( node, i ) => i && node.start() ) )
+				.then( () => Promise.all( nodes.map( node => node.stop() ) ) );
+		} );
 	} );
 
-	suite( "in a small multi-node cluster starting all nodes", function() {
+	suite( "in a small multi-node cluster starting all nodes", () => {
 		let nodes;
 
 		suiteSetup( () => {
 			nodes = smallClusterAddresses.map( address => Shell( address, {
-				db: MemDown,
+				db: MemDown(),
 				peers: smallClusterAddresses
 			} ) );
 		} );
@@ -111,7 +120,7 @@ suite( "leader election", () => {
 
 		suiteSetup( () => {
 			nodes = smallClusterAddresses.map( address => Shell( address, {
-				db: MemDown,
+				db: MemDown(),
 				peers: smallClusterAddresses
 			} ) );
 		} );
@@ -139,7 +148,7 @@ suite( "leader election", () => {
 
 		suiteSetup( () => {
 			nodes = smallClusterAddresses.map( address => Shell( address, {
-				db: MemDown,
+				db: MemDown(),
 				peers: smallClusterAddresses
 			} ) );
 		} );
@@ -164,12 +173,12 @@ suite( "leader election", () => {
 		suiteTeardown( "stops cluster", () => Promise.all( nodes.map( node => node.stop() ) ) );
 	} );
 
-	suite( "in a large multi-node cluster starting all nodes", function() {
+	suite( "in a large multi-node cluster starting all nodes", () => {
 		let nodes;
 
 		suiteSetup( () => {
 			nodes = largeClusterAddresses.map( address => Shell( address, {
-				db: MemDown,
+				db: MemDown(),
 				peers: largeClusterAddresses
 			} ) );
 		} );
@@ -197,7 +206,7 @@ suite( "leader election", () => {
 
 		suiteSetup( () => {
 			nodes = largeClusterAddresses.map( address => Shell( address, {
-				db: MemDown,
+				db: MemDown(),
 				peers: largeClusterAddresses
 			} ) );
 		} );
@@ -225,7 +234,7 @@ suite( "leader election", () => {
 
 		suiteSetup( () => {
 			nodes = largeClusterAddresses.map( address => Shell( address, {
-				db: MemDown,
+				db: MemDown(),
 				peers: largeClusterAddresses
 			} ) );
 		} );

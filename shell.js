@@ -52,10 +52,10 @@ class Shell extends EventEmitter {
 	constructor( id, options = {} ) {
 		super();
 
-		id = Address( id );
-		options = Object.freeze( deepMerge( {}, DEFAULT_OPTIONS, options || {} ) );
+		const _id = Address( id );
+		const _options = Object.freeze( deepMerge( {}, DEFAULT_OPTIONS, options || {} ) );
 
-		Debug( "creating node %s with peers %j", id, options.peers );
+		Debug( "creating node %s with peers %j", _id, _options.peers );
 
 		Object.defineProperties( this, {
 			/**
@@ -64,7 +64,7 @@ class Shell extends EventEmitter {
 			 * @property {Address} id
 			 * @readonly
 			 */
-			id: { value: id },
+			id: { value: _id },
 
 			/**
 			 * Describes node's customizations.
@@ -72,12 +72,12 @@ class Shell extends EventEmitter {
 			 * @property {object<string,*>} options
 			 * @readonly
 			 */
-			options: { value: options }
+			options: { value: _options }
 		} );
 
 
-		const db = new DB( options.location, id, options.db, options.levelup );
-		const node = new Node( id, db, options );
+		const db = new DB( _id, _options );
+		const node = new Node( _id, db, _options );
 		const commands = new Commands( node );
 
 		Object.defineProperties( this, {
