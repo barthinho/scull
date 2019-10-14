@@ -1,5 +1,8 @@
 "use strict";
 
+const wtf = require( "wtfnode" );
+setTimeout( () => wtf.dump(), 10000 );
+
 const { suite, test, suiteSetup, suiteTeardown } = require( "mocha" );
 require( "should" );
 const MemDown = require( "memdown" );
@@ -58,7 +61,7 @@ suite( "leader election", () => {
 		suiteSetup( () => {
 			nodes = smallClusterAddresses.map( address => Shell( address, {
 				db: MemDown(),
-				peers: smallClusterAddresses
+				peers: smallClusterAddresses,
 			} ) );
 		} );
 
@@ -82,8 +85,7 @@ suite( "leader election", () => {
 		} );
 
 		suiteTeardown( "stops cluster", () => {
-			return Promise.all( nodes.map( ( node, i ) => i && node.start() ) )
-				.then( () => Promise.all( nodes.map( node => node.stop() ) ) );
+			return nodes[0].stop();
 		} );
 	} );
 
