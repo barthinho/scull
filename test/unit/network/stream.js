@@ -30,7 +30,7 @@
 
 const Crypto = require( "crypto" );
 
-const { suite, test, setup, suiteSetup } = require( "mocha" );
+const { suite, test, setup, suiteSetup, suiteTeardown } = require( "mocha" );
 const Should = require( "should" );
 
 const Stream = require( "../../../lib/network/common/stream" );
@@ -68,17 +68,15 @@ suite( "Network stream", function() {
 					socket.on( "close", () => socket.removeAllListeners() );
 				} );
 
-				newServer._close = () => {
-					return new Promise( onClosed => {
-						newServer.once( "close", onClosed );
-						newServer.close();
+				newServer._close = () => new Promise( onClosed => {
+					newServer.once( "close", onClosed );
+					newServer.close();
 
-						links.forEach( socket => {
-							socket.setTimeout( 1 );
-							socket.end();
-						} );
+					links.forEach( socket => {
+						socket.setTimeout( 1 );
+						socket.end();
 					} );
-				};
+				} );
 			} )
 				.then( createdServer => {
 					server = createdServer;
@@ -86,6 +84,7 @@ suite( "Network stream", function() {
 		};
 
 		suiteSetup( () => createServer( SERVER_ADDRESS ) );
+		suiteTeardown( () => server && server._close() );
 
 		setup( () => {
 			received = [];

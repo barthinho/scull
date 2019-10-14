@@ -1,8 +1,5 @@
 "use strict";
 
-const wtf = require( "wtfnode" );
-setTimeout( () => wtf.dump(), 10000 );
-
 const { suite, test, suiteSetup, suiteTeardown } = require( "mocha" );
 require( "should" );
 const MemDown = require( "memdown" );
