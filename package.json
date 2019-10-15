@@ -4,9 +4,10 @@
   "description": "Javascript Raft Consensus Protocol",
   "main": "shell.js",
   "scripts": {
-    "style": "eslint shell.js lib",
+    "lint": "eslint shell.js lib",
     "test": "mocha test/unit/**/*.js",
-    "resilience-test": "mocha test/resilience/*.js",
+    "resilience-basic": "mocha test/resilience/*.js --exclude *.plus.js",
+    "resilience-plus": "mocha test/resilience/*.plus.js --exclude *.plus.js",
     "coverage": "nyc mocha test/unit/**/*.js"
   },
   "repository": {
