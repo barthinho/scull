@@ -1,0 +1,10 @@
+.idea
+.vscode
+.nyc_output
+test
+.editorconfig
+.eslintignore
+.eslintrc
+.gitignore
+.istanbul.yml
+.travis.yml
