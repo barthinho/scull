@@ -2,6 +2,8 @@
 
 const EventEmitter = require( "events" );
 
+require( "debug" ).enable( "scull:error" );
+
 const Debug = require( "debug" )( "scull:shell" );
 const LevelUp = require( "levelup" );
 
