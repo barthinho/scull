@@ -8,7 +8,7 @@
 
 ## About
 
-This package was started as a fork of package [skiff](https://www.npmjs.com/package/skiff) by Pedro Teixeira. 
+This package was started as a fork of package [skiff](https://www.npmjs.com/package/skiff) by Pedro Teixeira.
 
 While reading, revising and refactoring original code, trying to understand the project and fixing some encountered issues we've planned to keep this fork tightly bound to the original package by using similar name, sharing version numbers and probably providing revisions back upstream. But on starting to introduce changes breaking existing API as well as trying to replace some downsides of existing code with more efficient features we considered our fork significantly moving away from its origin. That's why we chose to switch its name to express this stronger separation.
 
@@ -101,7 +101,7 @@ Creates a new `Shell` for controlling local node in cluster.
 
 ## shell.start() : Promise
 
-This method is starting current node by establishing network connectivity, loading its persistent state from database and entering follower state while waiting for first heartbeat request from current leader node of cluster. The returned promise is resolved on having loaded persistent state and on having started to listen for incoming requests. 
+This method is starting current node by establishing network connectivity, loading its persistent state from database and entering follower state while waiting for first heartbeat request from current leader node of cluster. The returned promise is resolved on having loaded persistent state and on having started to listen for incoming requests.
 
 ## shell.stop() : Promise
 
@@ -165,7 +165,7 @@ A `Shell` instance emits the following events:
 * `warning (err)`: if a non-fatal error was encountered
 * `connect (peer)`: once a leader node is connected to a peer
 * `disconnect (peer)`: once a leader node is disconnected from a peer
-* `new state (state)`: once a node changes state (possible states are `follower`, `candidate` and `leader`)
+* `new state (newState, oldState)`: once a node changes state (possible states are `follower`, `candidate` and `leader`)
 * `leader`: once the node becomes the cluster leader
 * `joined (peerAddress)`: emitted on peer joining the cluster
 * `left (peerAddress)`: emitted on peer leaving the cluster
