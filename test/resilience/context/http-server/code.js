@@ -64,13 +64,21 @@ const server = Http.createServer( function( req, res ) {
 } );
 
 
+let timer = Date.now();
+
 Promise.all( [
 	new Promise( resolve => server.listen( port + 1, resolve ) ),
 	node.start( true ),
 ] )
 	.then( () => {
 		console.log( `server ${address} started${node.is( "leader" ) ? " as leader" : ""}` ); // eslint-disable-line no-console
-		node.on( "new state", state => console.log( "new state: %j", state ) ); // eslint-disable-line no-console
+		node.on( "new state", ( state, oldState ) => {
+			const now = Date.now();
+			const delay = now - timer;
+			timer = now;
+
+			console.log( "new state: %s -> %s   %s ms", ( oldState || "" ).padStart( 10 ), state.padStart( 10 ), String( delay ).padStart( 6 ) );
+		} );
 	} )
 	.catch( error => {
 		console.log( `server ${address} failed: ${error.message}` ); // eslint-disable-line no-console
