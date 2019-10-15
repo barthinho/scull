@@ -85,9 +85,9 @@ class HttpServerNode extends EventEmitter {
 					this._child[channel]
 						.pipe( Split() )
 						.on( "data", line => {
-							line = line.trim();
-							if ( line ) {
-								process[channel].write( `${this.port} (${this._child.pid}): ${line}\n` );
+							const _line = line.trim();
+							if ( _line ) {
+								process[channel].write( `${this.port} ${`(${this._child.pid})`.padStart( 7 )}: ${_line}\n` );
 
 								if ( channel === "stderr" && !warned ) {
 									warned = true;

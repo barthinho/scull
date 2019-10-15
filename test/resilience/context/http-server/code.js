@@ -72,12 +72,21 @@ Promise.all( [
 ] )
 	.then( () => {
 		console.log( `server ${address} started${node.is( "leader" ) ? " as leader" : ""}` ); // eslint-disable-line no-console
+
 		node.on( "new state", ( state, oldState ) => {
 			const now = Date.now();
 			const delay = now - timer;
 			timer = now;
 
-			console.log( "new state: %s -> %s   %s ms", ( oldState || "" ).padStart( 10 ), state.padStart( 10 ), String( delay ).padStart( 6 ) );
+			console.log( "new state: %s -> %s   %s ms", ( oldState || "" ).padStart( 10 ), state.padStart( 10 ), String( "+" + delay ).padStart( 6 ) );
+		} );
+
+		node.on( "up-to-date", () => {
+			const now = Date.now();
+			const delay = now - timer;
+			timer = now;
+
+			console.log( "up-to-date   %s ms", String( "+" + delay ).padStart( 6 ) );
 		} );
 	} )
 	.catch( error => {
