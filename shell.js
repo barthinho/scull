@@ -2,7 +2,7 @@
 
 const EventEmitter = require( "events" );
 
-const Debug = require( "debug" )( "scull.shell" );
+const Debug = require( "debug" )( "scull:shell" );
 const LevelUp = require( "levelup" );
 
 const { deepMerge } = require( "./lib/utils/object" );

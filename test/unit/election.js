@@ -4,7 +4,7 @@ const { suite, test, suiteSetup, suiteTeardown } = require( "mocha" );
 require( "should" );
 const MemDown = require( "memdown" );
 
-// process.env.DEBUG = "scull.consensus,scull.rpc.traffic";
+// process.env.DEBUG = "scull:consensus,scull:rpc:traffic";
 const Shell = require( "../../shell" );
 
 
