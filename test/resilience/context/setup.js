@@ -149,11 +149,11 @@ module.exports = function Setup( _options ) {
 		}
 
 		const node = liveNodes.splice( Math.floor( Math.random() * liveNodes.length ), 1 )[0];
-		const { port } = node;
+		const { port, options: { id } } = node;
 
 		console.log( "killing %s...", port ); // eslint-disable-line no-console
 
-		deadNodeAdresses.push( port );
+		deadNodeAdresses.push( { port, id } );
 
 		return node.stop();
 	}
@@ -164,12 +164,13 @@ module.exports = function Setup( _options ) {
 	 * @returns {Promise} promises picked node started again
 	 */
 	function reviveOne() {
-		const address = deadNodeAdresses.splice( Math.floor( Math.random() * deadNodeAdresses.length ), 1 )[0];
+		const { port, id } = deadNodeAdresses.splice( Math.floor( Math.random() * deadNodeAdresses.length ), 1 )[0];
 
-		console.log( "reviving %s...", address ); // eslint-disable-line no-console
+		console.log( "reviving %s...", port ); // eslint-disable-line no-console
 
-		const node = new HttpServerNode( address, {
-			peers: allAddresses.filter( addr => addr !== address ),
+		const node = new HttpServerNode( port, {
+			id: id,
+			peers: allAddresses.filter( addr => addr !== `/ip4/127.0.0.1/tcp/${port}` ),
 			persist: options.persist,
 		} );
 

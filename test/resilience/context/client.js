@@ -2,6 +2,7 @@
 
 const EventEmitter = require( "events" );
 const Http = require( "http" );
+const Utility = require( "util" );
 
 const MultiAddress = require( "multiaddr" );
 const ClientLog = require( "debug" )( "scull:resilience:client" );
@@ -62,17 +63,14 @@ class ResilienceTestClient extends EventEmitter {
 		 */
 		this.leader = null;
 
-		Object.defineProperties( this, {
-			/**
-			 * Provides timestamp in ms since Unix Epoch of moment when client
-			 * was created.
-			 *
-			 * @name Client#created
-			 * @property {int}
-			 * @readonly
-			 */
-			created: { value: Date.now() },
+		/**
+		 * Indicates if client is meant to work currently.
+		 *
+		 * @type {boolean}
+		 */
+		this.running = false;
 
+		Object.defineProperties( this, {
 			/**
 			 * Lists IDs/addresses of all currently available endpoints.
 			 *
@@ -113,6 +111,8 @@ class ResilienceTestClient extends EventEmitter {
 	 * @returns {Promise} promises having passed all tests after defined runtime has elapsed
 	 */
 	start() {
+		this.running = true;
+
 		return new Promise( ( resolve, reject ) => {
 			const putInitial = ( index, stopAt ) => {
 				if ( index >= stopAt ) {
@@ -129,9 +129,11 @@ class ResilienceTestClient extends EventEmitter {
 			putInitial( 0, keys.length );
 		} )
 			.then( () => new Promise( ( resolve, reject ) => {
-				this.timeout = setTimeout( resolve, this.options.duration );
+				this.timeout = setTimeout( () => {
+					this.running = false;
+				}, this.options.duration );
 
-				return this.work( error => ( error ? reject( error ) : resolve() ) );
+				this.work( error => ( error ? reject( error ) : resolve() ) );
 			} ) );
 	}
 
@@ -150,10 +152,9 @@ class ResilienceTestClient extends EventEmitter {
 
 				this.stats.operationsCompleted++;
 
-				if ( Date.now() - this.created < this.options.duration ) {
+				if ( this.running ) {
 					process.nextTick( () => this.work( doneFn ) );
 				} else {
-					clearTimeout( this.timeout );
 					doneFn();
 				}
 			} )
@@ -171,7 +172,7 @@ class ResilienceTestClient extends EventEmitter {
 	makeOneRequest() {
 		const key = keys[Math.floor( Math.random() * keys.length )];
 
-		return Math.random() > 0.5 ? this.makeOnePutRequest( key ) : this.makeOneGetRequest( key );
+		return Math.random() >= 0.5 ? this.makeOnePutRequest( key ) : this.makeOneGetRequest( key );
 	}
 
 	/**
@@ -241,12 +242,11 @@ class ResilienceTestClient extends EventEmitter {
 					method: "GET",
 					path: `/${key}`,
 				} ) )
-					.then( response => this.parseResponse( response, endpoint, 200, tryGet, payload => {
-						const value = Number( payload ) || 0;
-						if ( value === expectedValue ) {
+					.then( response => this.parseResponse( response, endpoint, 200, tryGet, value => {
+						if ( Number( value ) === expectedValue ) {
 							resolve( value );
-						} else if ( secondChance ) {
-							reject( new Error( `GETting from ${endpoint} for key ${key}: expected ${expectedValue}, got ${value}` ) );
+						} else if ( secondChance || !this.running ) {
+							reject( new Error( Utility.format( `GETting from %j for key ${key}: expected ${expectedValue}, got %j`, endpoint, value ) ) );
 						} else {
 							secondChance = true;
 							setTimeout( tryGet, 200 );
