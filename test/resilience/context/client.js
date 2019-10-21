@@ -4,7 +4,9 @@ const EventEmitter = require( "events" );
 const Http = require( "http" );
 
 const MultiAddress = require( "multiaddr" );
+const ClientLog = require( "debug" )( "scull:resilience:client" );
 
+// require( "debug" ).enable( "scull:resilience:client" );
 
 const keys = [ "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "x", "y", "z" ];
 const defaultOptions = {
@@ -66,17 +68,26 @@ class ResilienceTestClient extends EventEmitter {
 			 * was created.
 			 *
 			 * @name Client#created
-			 * @property {int} timestamp of having created this client
+			 * @property {int}
 			 * @readonly
 			 */
 			created: { value: Date.now() },
+
+			/**
+			 * Lists IDs/addresses of all currently available endpoints.
+			 *
+			 * @name Client#addresses
+			 * @property {Address[]}
+			 * @readonly
+			 */
+			addresses: { value: addresses.slice( 0 ) },
 
 			/**
 			 * Lists addresses of all currently available endpoints for sending
 			 * requests to.
 			 *
 			 * @name Client#endpoints
-			 * @property {PeerAddress[]} timestamp of having created this client
+			 * @property {PeerAddress[]}
 			 * @readonly
 			 */
 			endpoints: { value: addresses.map( address => this.constructor.addressToUrl( address ) ) },
@@ -92,7 +103,7 @@ class ResilienceTestClient extends EventEmitter {
 		} );
 
 		for ( let i = 0; i < keys.length; i++ ) {
-			this.values[keys[i]] = 0;
+			this.values[keys[i]] = -1;
 		}
 	}
 
@@ -103,10 +114,25 @@ class ResilienceTestClient extends EventEmitter {
 	 */
 	start() {
 		return new Promise( ( resolve, reject ) => {
-			this.timeout = setTimeout( resolve, this.options.duration );
+			const putInitial = ( index, stopAt ) => {
+				if ( index >= stopAt ) {
+					setTimeout( resolve, 200 );
+				} else {
+					this.makeOnePutRequest( keys[index] )
+						.then( () => {
+							process.nextTick( putInitial, index + 1, stopAt );
+						} )
+						.catch( reject );
+				}
+			};
 
-			return this.work( error => ( error ? reject( error ) : resolve() ) );
-		} );
+			putInitial( 0, keys.length );
+		} )
+			.then( () => new Promise( ( resolve, reject ) => {
+				this.timeout = setTimeout( resolve, this.options.duration );
+
+				return this.work( error => ( error ? reject( error ) : resolve() ) );
+			} ) );
 	}
 
 	/**
@@ -158,6 +184,8 @@ class ResilienceTestClient extends EventEmitter {
 	makeOnePutRequest( key ) {
 		const value = String( ++this.values[key] );
 
+		ClientLog( `PUT ${key} = %j ???`, value );
+
 		return new Promise( ( resolve, reject ) => {
 			/**
 			 * Issues single request for putting value.
@@ -166,6 +194,8 @@ class ResilienceTestClient extends EventEmitter {
 			 */
 			const tryPut = () => {
 				const endpoint = this.pickEndpoint();
+
+				ClientLog( `... ${endpoint.port}`, value );
 
 				fetch( Object.assign( {}, endpoint, {
 					method: "PUT",
@@ -176,7 +206,11 @@ class ResilienceTestClient extends EventEmitter {
 			};
 
 			tryPut();
-		} );
+		} )
+			.then( data => {
+				ClientLog( `PUT ${key} = %j OK!`, value );
+				return data;
+			} );
 	}
 
 	/**
@@ -188,6 +222,9 @@ class ResilienceTestClient extends EventEmitter {
 	 */
 	makeOneGetRequest( key ) {
 		const expectedValue = this.values[key];
+		let secondChance = false;
+
+		ClientLog( `GET ${key} ???` );
 
 		return new Promise( ( resolve, reject ) => {
 			/**
@@ -198,6 +235,8 @@ class ResilienceTestClient extends EventEmitter {
 			const tryGet = () => {
 				const endpoint = this.pickEndpoint();
 
+				ClientLog( `... ${endpoint.port}${secondChance ? " (2nd chance)" : ""}` );
+
 				fetch( Object.assign( {}, endpoint, {
 					method: "GET",
 					path: `/${key}`,
@@ -205,16 +244,23 @@ class ResilienceTestClient extends EventEmitter {
 					.then( response => this.parseResponse( response, endpoint, 200, tryGet, payload => {
 						const value = Number( payload ) || 0;
 						if ( value === expectedValue ) {
-							resolve();
-						} else {
+							resolve( value );
+						} else if ( secondChance ) {
 							reject( new Error( `GETting from ${endpoint} for key ${key}: expected ${expectedValue}, got ${value}` ) );
+						} else {
+							secondChance = true;
+							setTimeout( tryGet, 200 );
 						}
 					}, reject ) )
 					.catch( error => this.parseError( error, tryGet, reject ) );
 			};
 
 			tryGet();
-		} );
+		} )
+			.then( data => {
+				ClientLog( `GET ${key} = %j`, data );
+				return data;
+			} );
 	}
 
 	/**
@@ -224,7 +270,18 @@ class ResilienceTestClient extends EventEmitter {
 	 * @returns {PeerAddress} address of endpoint
 	 */
 	pickEndpoint() {
-		return this.endpoints[Math.floor( Math.random() * this.endpoints.length )];
+		const indexes = [];
+
+		for ( let i = 0; i < 100; i++ ) {
+			const index = Math.floor( Math.random() * this.endpoints.length );
+			indexes.push( index );
+
+			if ( this.options.isLive( this.addresses[index] ) ) {
+				return this.endpoints[index];
+			}
+		}
+
+		throw new Error( require( "util" ).format( "RNG issue? failed picking endpoint: %j", indexes ) );
 	}
 
 	/**
