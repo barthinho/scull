@@ -3,7 +3,7 @@
 const { experiment: describe, before, beforeEach, afterEach, it } = exports.lab = require( "lab" ).script();
 const { expect } = require( "code" );
 
-const { generateShell, generateNode } = require( "../utilities/mockups" );
+const { generateShell, generateNode } = require( "./utilities/mockups" );
 
 const Log = require( "../../lib/log" );
 
