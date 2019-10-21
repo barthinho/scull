@@ -35,7 +35,7 @@ suite( "leader election", () => {
 		let node;
 
 		suiteSetup( () => {
-			node = Shell( singleNodeAddress, {
+			node = new Shell( singleNodeAddress, {
 				db: MemDown(),
 				peers: []
 			} );
@@ -56,7 +56,7 @@ suite( "leader election", () => {
 		let nodes;
 
 		suiteSetup( () => {
-			nodes = smallClusterAddresses.map( address => Shell( address, {
+			nodes = smallClusterAddresses.map( address => new Shell( address, {
 				db: MemDown(),
 				peers: smallClusterAddresses,
 			} ) );
@@ -90,7 +90,7 @@ suite( "leader election", () => {
 		let nodes;
 
 		suiteSetup( () => {
-			nodes = smallClusterAddresses.map( address => Shell( address, {
+			nodes = smallClusterAddresses.map( address => new Shell( address, {
 				db: MemDown(),
 				peers: smallClusterAddresses
 			} ) );
@@ -118,7 +118,7 @@ suite( "leader election", () => {
 		let nodes;
 
 		suiteSetup( () => {
-			nodes = smallClusterAddresses.map( address => Shell( address, {
+			nodes = smallClusterAddresses.map( address => new Shell( address, {
 				db: MemDown(),
 				peers: smallClusterAddresses
 			} ) );
@@ -146,7 +146,7 @@ suite( "leader election", () => {
 		let nodes;
 
 		suiteSetup( () => {
-			nodes = smallClusterAddresses.map( address => Shell( address, {
+			nodes = smallClusterAddresses.map( address => new Shell( address, {
 				db: MemDown(),
 				peers: smallClusterAddresses
 			} ) );
@@ -176,7 +176,7 @@ suite( "leader election", () => {
 		let nodes;
 
 		suiteSetup( () => {
-			nodes = largeClusterAddresses.map( address => Shell( address, {
+			nodes = largeClusterAddresses.map( address => new Shell( address, {
 				db: MemDown(),
 				peers: largeClusterAddresses
 			} ) );
@@ -204,7 +204,7 @@ suite( "leader election", () => {
 		let nodes;
 
 		suiteSetup( () => {
-			nodes = largeClusterAddresses.map( address => Shell( address, {
+			nodes = largeClusterAddresses.map( address => new Shell( address, {
 				db: MemDown(),
 				peers: largeClusterAddresses
 			} ) );
@@ -232,7 +232,7 @@ suite( "leader election", () => {
 		let nodes;
 
 		suiteSetup( () => {
-			nodes = largeClusterAddresses.map( address => Shell( address, {
+			nodes = largeClusterAddresses.map( address => new Shell( address, {
 				db: MemDown(),
 				peers: largeClusterAddresses
 			} ) );
