@@ -2,20 +2,20 @@
 
 const EventEmitter = require( "events" );
 
-require( "debug" ).enable( "scull:error" );
-
-const Debug = require( "debug" )( "scull:shell" );
+const Debug = require( "debug" );
 const LevelUp = require( "levelup" );
 
 const { deepMerge } = require( "./lib/utils/object" );
 const Address = require( "./lib/data/address" );
-const Network = require( "./lib/network" );
 const Node = require( "./lib/node" );
-const Commands = require( "./lib/commands" );
-const DB = require( "./lib/db" );
+const Database = require( "./lib/db" );
 const LevelDown = require( "./lib/leveldown" );
 const Iterator = require( "./lib/iterator" );
 
+
+const DebugLog = Debug( "scull:shell" );
+
+Debug.enable( "*" );
 
 const DEFAULT_OPTIONS = require( "./lib/default-options" );
 
@@ -48,8 +48,8 @@ const IMPORTANT_NODE_EVENTS = [
  */
 class Shell extends EventEmitter {
 	/**
-	 * @param {string|Address} id unique ID a.k.a. network address of node
-	 * @param {object<string,*>} options options
+	 * @param {string|Address} id address of current node's listener (used for identification as well)
+	 * @param {object<string,*>} options customization of node's behaviour
 	 */
 	constructor( id, options = {} ) {
 		super();
@@ -57,7 +57,9 @@ class Shell extends EventEmitter {
 		const _id = Address( id );
 		const _options = Object.freeze( deepMerge( {}, DEFAULT_OPTIONS, options || {} ) );
 
-		Debug( "creating node %s with peers %j", _id, _options.peers );
+		Debug.enable( "scull:error" );
+
+		DebugLog( "creating node %s with peers %j", _id, _options.peers );
 
 		Object.defineProperties( this, {
 			/**
@@ -78,15 +80,14 @@ class Shell extends EventEmitter {
 		} );
 
 
-		const db = new DB( _id, _options );
+		const db = new Database( _id, _options );
 		const node = new Node( _id, db, _options );
-		const commands = new Commands( node );
 
 		Object.defineProperties( this, {
 			/**
 			 * Refers to node's LevelDB instance.
 			 *
-			 * @property {DB} db
+			 * @property {Database} db
 			 * @readonly
 			 */
 			db: { value: db },
@@ -100,26 +101,6 @@ class Shell extends EventEmitter {
 			node: { value: node },
 
 			/**
-			 * @property {Connections} connections
-			 * @readonly
-			 */
-			connections: { value: node.connections },
-
-			/**
-			 * Manages writable queue of pending commands.
-			 *
-			 * @property {CommandQueue} commandQueue
-			 * @readonly
-			 */
-			commandQueue: { value: commands.queue },
-
-			/**
-			 * @property {Commands} commands
-			 * @readonly
-			 */
-			commands: { value: commands },
-
-			/**
 			 * Exposes current term of node.
 			 *
 			 * The node's term is an essential information in raft consensus
@@ -131,16 +112,25 @@ class Shell extends EventEmitter {
 			 * @property {int} term
 			 * @readonly
 			 */
-			term: { get: () => node.term }
+			term: { get: () => node.term },
+
+			/**
+			 * Enqueues commands to be executed by current node leading cluster.
+			 *
+			 * @name Shell#_commands
+			 * @property {Array}
+			 * @readonly
+			 * @protected
+			 */
+			_commands: { value: [] },
 		} );
 
 
-		this._implicitNetwork = false;
 		this._startState = "stopped";
 
 
-		// propagate events of wrapped instanceof Node
-		IMPORTANT_NODE_EVENTS.forEach( event => node.on( event, this.emit.bind( this, event ) ) );
+		// propagate events of wrapped node
+		IMPORTANT_NODE_EVENTS.forEach( event => node.on( event, ( ...args ) => this.emit( event, ...args ) ) );
 	}
 
 
@@ -154,62 +144,81 @@ class Shell extends EventEmitter {
 	 * @returns {Promise} resolved on node started
 	 */
 	start( waitForElectionPassed = false ) {
-		if ( !this._started ) {
+		if ( !this._starting ) {
 			if ( this._stopping ) {
-				throw new Error( "must not start while stopping node" );
+				return this._stopping
+					.then( () => this.start( waitForElectionPassed ) );
 			}
 
 			this._elected = new Promise( resolve => {
-				this.node.once( "elected", () => resolve() );
+				this.node.once( "elected", resolve );
 			} );
 
-			this._started = new Promise( ( resolve, reject ) => {
-				const id = this.id;
+			this._starting = this.node.start()
+				.then( () => new Promise( ( resolve, reject ) => {
+					const id = this.id;
 
-				Debug( "%s: start state is %s", id, this._startState );
+					DebugLog( "%s: start state is %s", id, this._startState );
 
-				switch ( this._startState ) {
-					case "stopped" :
-						this._startState = "starting";
+					switch ( this._startState ) {
+						case "stopped" :
+							this._startState = "starting";
 
-						Debug( "starting node %s", id );
+							DebugLog( "starting node %s", id );
 
-						Promise.all( [
-							this._startNetwork(),
-							this._loadPersistedState()
-						] )
-							.then( () => {
-								Debug( "%s: done starting", id );
+							Promise.all( [
+								this.node.network.start(),
+								this.db.load()
+									.then( results => {
+										DebugLog( "%s: loaded state from persistent database: %j", this.id, results );
 
-								this.node.transition( "follower" );
+										this.node.log.restart( results.log );
 
-								this._startState = "started";
-								this.emit( "started" );
-							}, error => {
-								Debug( "%s: starting failed", id );
+										if ( results.meta.currentTerm ) {
+											this.node.term = results.meta.currentTerm;
+										}
 
-								this.node.transition( "follower" );
+										if ( results.meta.votedFor ) {
+											this.node.votedFor = results.meta.votedFor;
+										}
 
-								this._startState = "stopped";
+										if ( results.meta.peers ) {
+											this.node.peers = results.meta.peers;
+										}
+									} ),
+							] )
+								.then( () => {
+									DebugLog( "%s: done starting", id );
 
-								throw error;
-							} )
-							.then( resolve )
-							.catch( reject );
-						break;
+									this.node.transition( "follower" );
 
-					case "started" :
-						resolve();
-						break;
+									this._startState = "started";
+									this.emit( "started" );
+								}, error => {
+									DebugLog( "%s: starting failed", id );
 
-					case "starting" :
-						this.once( "started", () => resolve() );
-						break;
-				}
-			} );
+									this.node.transition( "follower" );
+
+									this._startState = "stopped";
+
+									throw error;
+								} )
+								.then( resolve )
+								.catch( reject );
+							break;
+
+						case "started" :
+							resolve();
+							break;
+
+						case "starting" :
+							this.once( "started", () => resolve() );
+							break;
+					}
+				} ) );
 		}
 
-		return waitForElectionPassed ? this._elected : this._started;
+		return waitForElectionPassed ? this._elected : this._starting;
 	}
 
 	/**
@@ -219,143 +228,21 @@ class Shell extends EventEmitter {
 	 */
 	stop() {
 		if ( !this._stopping ) {
-			Debug( "%s: stopping node", this.id );
+			DebugLog( "%s: stopping node", this.id );
 
-			if ( !this._started ) {
+			if ( !this._starting ) {
 				return Promise.resolve();
 			}
 
-			this._stopping = new Promise( ( resolve, reject ) => {
-				this.node.stop();
-				this.connections.stop();
-
-				this._startState = "stopped";
-
-				if ( this._network ) {
-					this.emit( "finish", this._network );
-
-					this._network = undefined;
-
-					const { _implicitNetwork } = this;
-					if ( _implicitNetwork ) {
-						const { transmitting, receiving } = _implicitNetwork;
-
-						this._implicitNetwork = undefined;
-
-						transmitting.end();
-						receiving.end();
-
-						receiving.server.onStopped.then( resolve ).catch( reject );
-						return;
-					}
-				}
-
-				resolve();
-			} )
+			this._stopping = this.node.stop()
 				.then( () => {
-					this._started = this._elected = this._stopping = undefined;
+					this._startState = "stopped";
+					this._starting = this._elected = this._stopping = undefined;
 				} );
 		}
 
 		return this._stopping;
 	}
-
-	/**
-	 * Integrates controlled node with network.
-	 *
-	 * @returns {Promise} resolved on network integration has finished
-	 */
-	_startNetwork() {
-		return new Promise( resolve => {
-			const address = this.id.toSocketOptions();
-
-			let network = this.options.network;
-			if ( network ) {
-				if ( !network.isPrepared() ) {
-					throw new TypeError( "provided network is not prepared" );
-				}
-			} else {
-				this._implicitNetwork = network = Network.createNetwork( this.id, {
-					receiving: {
-						server: deepMerge( {}, address, this.options.server ),
-					}
-				} );
-			}
-
-
-			const { receiving, transmitting } = network;
-			const { node } = this;
-
-			receiving.assignNodes( node.peers );
-			transmitting.assignNodes( node.peers );
-
-			const server = receiving.node( this.id );
-			const client = transmitting.node( this.id );
-
-			this._network = { transmitting, receiving };
-
-			// pipe all incoming messages into dispatcher bound to wrapped node
-			// - on receiving requests
-			server.pipe( this.node.requestDispatcher, { end: false } );
-			// - on receiving responses
-			client.pipe( this.node.replyDispatcher, { end: false } );
-
-			// pipe output streams of wrapped node into network sockets for actual
-			// transmission
-			node.requestOut.pipe( transmitting, { end: false } );
-			node.responseOut.pipe( server, { end: false } );
-
-
-			// expose connection state events on client-side socket
-			const _boundConnect = this.emit.bind( this, "connect" );
-			const _boundDisconnect = this.emit.bind( this, "disconnect" );
-
-			transmitting.on( "connect", _boundConnect );
-			transmitting.on( "disconnect", _boundDisconnect );
-
-			this.once( "finish", () => {
-				transmitting.removeListener( "connect", _boundConnect );
-				transmitting.removeListener( "disconnect", _boundDisconnect );
-			} );
-
-
-			if ( network.receiving.isListening ) {
-				resolve( network );
-			} else {
-				network.receiving.once( "listening", () => resolve( network ) );
-			}
-		} )
-			.then( network => {
-				this.node.emit( "network attached", network );
-			} );
-	}
-
-	/**
-	 * @returns {Promise} resolved on persisted state loaded into node
-	 * @protected
-	 */
-	_loadPersistedState() {
-		return this.db.load()
-			.then( results => {
-				Debug( "%s: loaded state from persistent database: %j", this.id, results );
-
-				this.node.log.restart( results.log );
-
-				if ( results.meta.currentTerm ) {
-					this.node.term = results.meta.currentTerm;
-				}
-
-				if ( results.meta.votedFor ) {
-					this.node.votedFor = results.meta.votedFor;
-				}
-
-				if ( results.meta.peers ) {
-					this.node.peers = results.meta.peers;
-				}
-			} );
-	}
-
-	// ------ Topology
 
 	/**
 	 * Registers node at given address to be joining cluster.
@@ -364,7 +251,7 @@ class Shell extends EventEmitter {
 	 * @returns {Promise} resolved when finished
 	 */
 	join( address ) {
-		Debug( "%s: joining %s", this.id, address );
+		DebugLog( "%s: joining %s", this.id, address );
 
 		return this.start().then( () => this.node.join( address ) );
 	}
@@ -376,37 +263,19 @@ class Shell extends EventEmitter {
 	 * @returns {Promise} resolved when finished
 	 */
 	leave( address ) {
-		Debug( "%s: leaving %s", this.id, address );
+		DebugLog( "%s: leaving %s", this.id, address );
 
 		return this.start().then( () => this.node.leave( address ) );
 	}
 
-	// ------ Commands
-
 	/**
 	 * Perform arbitrary command in cluster.
 	 *
-	 * @param {object} command command to execute
-	 * @param {object<string,*>} options options for executing command
+	 * @param {AbstractCommand} command command to be executed
 	 * @returns {Promise} resolved when finished
 	 */
-	command( command, options = {} ) {
-		if ( this.is( "leader" ) ) {
-			return new Promise( ( resolve, reject ) => {
-				this.commandQueue.write( {
-					command, options, callback: ( error, result ) => {
-						if ( error ) {
-							reject( error );
-						} else {
-							resolve( result );
-						}
-					}
-				} );
-			} );
-		}
-
-		// not a leader: bypass queue and forward command to current leader
-		return this.node.command( command, options );
+	command( command ) {
+		return this.node.command( command );
 	}
 
 	/**
@@ -415,8 +284,8 @@ class Shell extends EventEmitter {
 	 *
 	 * @returns {Promise} resolved when finished
 	 */
-	readConsensus() {
-		return this.node.readConsensus();
+	seekConsensus() {
+		return this.node.seekConsensus();
 	}
 
 	/**
@@ -429,8 +298,6 @@ class Shell extends EventEmitter {
 	waitFor( peers ) {
 		return this.node.waitFor( Array.isArray( peers ) ? peers : [peers] );
 	}
-
-	// ------- State
 
 	/**
 	 * Detects if current node is in selected state.
@@ -452,8 +319,6 @@ class Shell extends EventEmitter {
 		this.node.weaken( duration );
 	}
 
-	// -------- Level*
-
 	/**
 	 * Fetches LevelDOWN API for accessing state machine of cluster through this
 	 * node.
@@ -461,7 +326,7 @@ class Shell extends EventEmitter {
 	 * @returns {*} LevelDOWN API
 	 */
 	levelDown() {
-		return new LevelDown( this.node, options => new Iterator( this, this.db.state, options ) );
+		return new LevelDown( this.node, options => new Iterator( this.node, this.db.state, options ) );
 	}
 
 	/**
@@ -478,18 +343,6 @@ class Shell extends EventEmitter {
 		}, options ) );
 	}
 
-
-	// -------- Stats
-
-	/**
-	 * Fetches statistical information on current node's network activities.
-	 *
-	 * @returns {NodeStats} provides counters regarding current node's activity
-	 */
-	stats() {
-		return this.node.stats;
-	}
-
 	/**
 	 * Fetches list of peers in cluster including statistical information on
 	 * every peer from current leader node.
@@ -499,28 +352,6 @@ class Shell extends EventEmitter {
 	peers() {
 		return this.node.fetchPeers();
 	}
-
-	/**
-	 * Fetches current entries of this node's backlog of actions to control
-	 * cluster's state.
-	 *
-	 * @returns {LogEntry[]} lists recent log entries of local node
-	 */
-	logEntries() {
-		return this.node.log.entries;
-	}
 }
 
-/**
- * Creates manager for controlling single node of raft consensus cluster.
- *
- * @param {string|Address} id node's address (serving as its ID, too)
- * @param {object} options customizing options
- * @returns {Shell} created manager instance
- */
-module.exports = function createNodeShell( id, options = {} ) {
-	return new Shell( id, options );
-};
-
-module.exports.Shell = Shell;
-module.exports.createNetwork = Network.createNetwork;
+module.exports = Shell;

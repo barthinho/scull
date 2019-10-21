@@ -50,12 +50,12 @@ describe( "log compaction", () => {
 	} );
 
 	it( "log length was capped", done => {
-		expect( leader.logEntries().length ).to.equal( 10 );
+		expect( leader.node.log.entries.length ).to.equal( 10 );
 		done();
 	} );
 
 	it( "waits for consensus with all nodes of cluster", { timeout: 5000 }, done => {
-		leader.waitFor( nodeAddresses ).then( () => done(), done );
+		return leader.waitFor( nodeAddresses ).then( () => done(), done );
 	} );
 
 	describe( "adding node after reaching consensus", () => {

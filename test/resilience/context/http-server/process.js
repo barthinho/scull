@@ -74,7 +74,7 @@ class HttpServerNode extends EventEmitter {
 				JSON.stringify( this.options ),
 			], {
 				silent: true,
-				// env: { DEBUG: "scull:heartbeat" },
+				env: { DEBUG: "*" },
 			} );
 
 			let warned = false;

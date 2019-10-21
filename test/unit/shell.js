@@ -1,9 +1,9 @@
 /**
- * (c) 2018 cepharum GmbH, Berlin, http://cepharum.de
+ * (c) 2019 cepharum GmbH, Berlin, http://cepharum.de
  *
  * The MIT License (MIT)
  *
- * Copyright (c) 2018 cepharum GmbH
+ * Copyright (c) 2019 cepharum GmbH
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,37 +28,43 @@
 
 "use strict";
 
-const { suite, test } = require( "mocha" );
+const { describe, it, beforeEach, afterEach } = require( "mocha" );
 require( "should" );
 
-const { ReceivingNetwork } = require( "../../../lib/network/index" );
+const Shell = require( "../../" );
 
-const MY_ADDRESS = "/ip4/127.0.0.1/tcp/8080/what/ever";
+describe( "Cluster node shell", () => {
+	let node;
 
-
-suite( "A receiving network", () => {
-	test( "is available", () => {
-		( ReceivingNetwork != null ).should.be.true();
+	beforeEach( () => {
+		node = null;
 	} );
 
-	test( "throw when created w/o provision of local address for listening", () => {
-		( () => new ReceivingNetwork() ).should.throw();
+	afterEach( () => {
+		return node ? node.stop() : undefined;
 	} );
 
-	test( "can be created w/ local node's address required for listening", () => {
-		const network = new ReceivingNetwork( MY_ADDRESS );
-		network.end();
-
-		return new Promise( resolve => network.once( "close", resolve ) );
+	it( "is available", () => {
+		Shell.should.be.ok();
 	} );
 
-	test( "exposes writable stream", () => {
-		const network = new ReceivingNetwork( MY_ADDRESS );
+	it( "throws when instantiated w/o ID", () => {
+		( () => new Shell() ).should.throw();
+	} );
 
-		network.should.be.instanceOf( require( "stream" ).Writable );
+	it( "does not throw when instantiated w/ ID", () => {
+		( () => { node = new Shell( "/ip4/127.0.0.1/tcp/9201" ); } ).should.not.throw();
+	} );
 
-		network.end();
+	it( "exposes its node manager", () => {
+		node = new Shell( "/ip4/127.0.0.1/tcp/9201" );
 
-		return new Promise( resolve => network.once( "close", resolve ) );
+		node.should.have.property( "node" ).which.is.instanceof( require( "../../lib/node" ) );
+	} );
+
+	it( "exposes its database manager", () => {
+		node = new Shell( "/ip4/127.0.0.1/tcp/9201" );
+
+		node.should.have.property( "db" ).which.is.instanceof( require( "../../lib/db" ) );
 	} );
 } );

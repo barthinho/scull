@@ -5,6 +5,7 @@ const { suite, test, setup, teardown } = require( "mocha" );
 const Setup = require( "./context/setup" );
 const ResilienceTestClient = require( "./context/client" );
 
+require( "debug" ).enable();
 
 suite( "resilience, no chaos, in memory", function() {
 	this.timeout( 30000 );

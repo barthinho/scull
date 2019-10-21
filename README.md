@@ -139,13 +139,13 @@ This read-only property provides current term of controlled node. The term is id
 
 Weakens the node for the duration. During this period, the node transitions to a special `weakened` state, in which the node does not react to election timeouts. This period ends once it learns a new leader or the period runs out.
 
-## shell.readConsensus() : Promise
+## shell.seekConsensus() : Promise
 
 Requests special `read` command on cluster to be confirmed by a majority of nodes in cluster considered consensus from the cluster on its current state as managed by current leader node.
 
 ## shell.waitFor( peers ) : Promise
 
-Performs equivalent request as `shell.readConsensus()` but requiring explicit confirmation from all given peers in addition to required confirmation by majority.
+Performs equivalent request as `shell.seekConsensus()` but requiring explicit confirmation from all given peers in addition to required confirmation by majority.
 
 This method is available to make sure one or more nodes of cluster have been catching up.
 
