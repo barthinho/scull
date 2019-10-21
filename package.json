@@ -2,7 +2,7 @@
   "name": "scull",
   "version": "2.0.2",
   "description": "Javascript Raft Consensus Protocol",
-  "main": "shell.js",
+  "main": "lib/shell.js",
   "scripts": {
     "lint": "eslint shell.js lib",
     "test": "mocha test/unit/**/*.js",

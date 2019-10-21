@@ -13,7 +13,7 @@ const { join } = require( "path" );
 
 const MemDown = require( "memdown" );
 
-const Shell = require( "../../../../shell" );
+const Shell = require( "../../../../" );
 
 
 const port = Number( process.argv[2] );

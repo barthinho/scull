@@ -6,7 +6,7 @@ const { expect } = require( "code" );
 const Async = require( "async" );
 const MemDown = require( "memdown" );
 
-const Shell = require( "../../shell" );
+const Shell = require( "../../" );
 
 describe( "persistence", () => {
 	let nodes, leader, leveldown, term, items;

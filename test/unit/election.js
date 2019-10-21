@@ -5,7 +5,7 @@ require( "should" );
 const MemDown = require( "memdown" );
 
 // process.env.DEBUG = "scull:consensus,scull:rpc:traffic";
-const Shell = require( "../../shell" );
+const Shell = require( "../../" );
 
 
 const singleNodeAddress = "/ip4/127.0.0.1/tcp/9101";

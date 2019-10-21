@@ -2,7 +2,7 @@
 
 const MemDown = require( "memdown" );
 
-const Shell = require( "../../shell" );
+const Shell = require( "../../" );
 const Node = require( "../../lib/node" );
 
 let nextPort = 9999;

@@ -5,7 +5,7 @@ const { expect } = require( "code" );
 
 const MemDown = require( "memdown" );
 
-const Shell = require( "../../shell" );
+const Shell = require( "../../" );
 
 describe( "log replication catchup", () => {
 	let nodes, follower, leader, newNode;
