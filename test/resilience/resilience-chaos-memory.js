@@ -9,7 +9,7 @@ const ResilienceTestClient = require( "./context/client" );
 suite( "resilience, chaos, in memory", function() {
 	this.timeout( 30000 );
 
-	const { before, after, addresses } = Setup();
+	const { before, after, addresses, isLive } = Setup();
 
 	setup( before );
 	teardown( after );
@@ -24,6 +24,7 @@ suite( "resilience, chaos, in memory", function() {
 
 			const client = new ResilienceTestClient( addresses, {
 				duration: 120000,
+				isLive,
 			} );
 
 			resetOperationTimeout();

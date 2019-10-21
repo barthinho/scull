@@ -10,7 +10,7 @@ const ResilienceTestClient = require( "./context/client" );
 suite.skip( "resilience, large cluster, chaos, on disk", function() {
 	this.timeout( 30000 );
 
-	const { before, after, addresses } = Setup( {
+	const { before, after, addresses, isLive } = Setup( {
 		chaos: true,
 		persist: true,
 		nodeCount: 7,
@@ -29,6 +29,7 @@ suite.skip( "resilience, large cluster, chaos, on disk", function() {
 
 			const client = new ResilienceTestClient( addresses, {
 				duration: 120000,
+				isLive,
 			} );
 
 			resetOperationTimeout();

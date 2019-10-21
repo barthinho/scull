@@ -8,7 +8,6 @@
 
 const Path = require( "path" );
 
-const PromiseUtils = require( "promise-essentials" );
 const { RmDir, MkDir } = require( "file-essentials" );
 
 const HttpServerNode = require( "./http-server/process" );
@@ -22,7 +21,7 @@ const defaultOptions = {
 };
 
 module.exports = function Setup( _options ) {
-	let killer, liveNodes;
+	let killer, liveNodes, active;
 
 	const deadNodeAdresses = [];
 	const allAddresses = [];
@@ -32,18 +31,18 @@ module.exports = function Setup( _options ) {
 
 	let killing = true;
 
-	return { before, after, addresses: allAddresses };
+	return { before, after, addresses: allAddresses, isLive };
 
 
 	/**
 	 * Sets up a set of nodes constantly killed and revived.
 	 *
-	 * @returns {Promise} promises setup finished with all nodes initially running
+	 * @returns {Promise} promises map of started nodes after setup finished with all nodes running initiall
 	 */
 	function before() {
 		return setupDirs()
-			.then( () => createNodes() )
-			.then( () => startNodes() )
+			.then( () => createAllNodes() )
+			.then( () => startAllNodes() )
 			.then( () => startKiller() );
 	}
 
@@ -53,9 +52,8 @@ module.exports = function Setup( _options ) {
 	 * @returns {Promise} promises network of nodes being shut down properly
 	 */
 	function after() {
-		stopKiller();
-
-		return stopNodes();
+		return stopKiller()
+			.then( () => stopAllNodes() );
 	}
 
 	/**
@@ -73,7 +71,7 @@ module.exports = function Setup( _options ) {
 	 *
 	 * @return {void}
 	 */
-	function createNodes() {
+	function createAllNodes() {
 		const count = options.nodeCount;
 		const ports = new Array( count );
 
@@ -83,7 +81,8 @@ module.exports = function Setup( _options ) {
 
 		ports.forEach( port => allAddresses.push( `/ip4/127.0.0.1/tcp/${port}` ) );
 
-		liveNodes = ports.map( port => new HttpServerNode( port, {
+		liveNodes = ports.map( ( port, index ) => new HttpServerNode( port, {
+			id: allAddresses[index],
 			peers: ports.filter( p => p !== port ).map( p => `/ip4/127.0.0.1/tcp/${p}` ),
 			persist: options.persist,
 		} ) );
@@ -94,7 +93,7 @@ module.exports = function Setup( _options ) {
 	 *
 	 * @returns {Promise} promises all nodes started
 	 */
-	function startNodes() {
+	function startAllNodes() {
 		return Promise.all( liveNodes.map( n => n.start() ) );
 	}
 
@@ -106,14 +105,12 @@ module.exports = function Setup( _options ) {
 	 */
 	function startKiller() {
 		if ( options.chaos ) {
-			killer = setInterval( () => {
-				killAndRevive( err => {
-					if ( err ) {
-						throw err;
-					} else {
+			killer = setTimeout( () => {
+				active = killOrRevive()
+					.then( () => {
+						active = null;
 						startKiller();
-					}
-				} );
+					} );
 			}, options.killerIntervalMS );
 		}
 	}
@@ -127,7 +124,7 @@ module.exports = function Setup( _options ) {
 	 *
 	 * @returns {Promise} promises another node being killed or revived
 	 */
-	function killAndRevive() {
+	function killOrRevive() {
 		if ( deadNodeAdresses.length >= maxDeadNodes ) {
 			killing = false;
 		} else if ( !deadNodeAdresses.length ) {
@@ -151,7 +148,7 @@ module.exports = function Setup( _options ) {
 			return Promise.reject( new Error( "unexpected request for killing node" ) );
 		}
 
-		const node = popRandomLiveNode();
+		const node = liveNodes.splice( Math.floor( Math.random() * liveNodes.length ), 1 )[0];
 		const { port } = node;
 
 		console.log( "killing %s...", port ); // eslint-disable-line no-console
@@ -167,7 +164,7 @@ module.exports = function Setup( _options ) {
 	 * @returns {Promise} promises picked node started again
 	 */
 	function reviveOne() {
-		const address = popRandomDeadNode();
+		const address = deadNodeAdresses.splice( Math.floor( Math.random() * deadNodeAdresses.length ), 1 )[0];
 
 		console.log( "reviving %s...", address ); // eslint-disable-line no-console
 
@@ -182,39 +179,33 @@ module.exports = function Setup( _options ) {
 	}
 
 	/**
-	 * Randomly selects live node and pops it off the list.
-	 *
-	 * @returns {*} selected node popped off the list of live nodes
-	 */
-	function popRandomLiveNode() {
-		return liveNodes.splice( Math.floor( Math.random() * liveNodes.length ), 1 )[0];
-	}
-
-	/**
-	 * Randomly selects address of a currently dead node and pops it off the
-	 * list.
-	 *
-	 * @returns {*} selected node popped off the list of dead nodes
-	 */
-	function popRandomDeadNode() {
-		return deadNodeAdresses.splice( Math.floor( Math.random() * deadNodeAdresses.length ), 1 )[0];
-	}
-
-	/**
 	 * Stops frequent process constantly killing and reviving nodes.
 	 *
-	 * @returns {void}
+	 * @returns {Promise} promises killer stopped and any of its tasks finished
 	 */
 	function stopKiller() {
 		clearInterval( killer );
+
+		return active || Promise.resolve();
 	}
 
 	/**
 	 * Stops all nodes that are currently live.
 	 *
-	 * @returns {Promise<HttpServerNode[]>} promises all live nodes stopped
+	 * @returns {Promise} promises all live nodes stopped
 	 */
-	function stopNodes() {
-		return PromiseUtils.each( liveNodes || [], node => node.stop() );
+	function stopAllNodes() {
+		return Promise.all( ( liveNodes || [] ).map( node => node.stop() ) );
+	}
+
+	/**
+	 * Detects if provided endpoint ID/address selects node assumed to be live
+	 * currently.
+	 *
+	 * @param {string} id ID/address of node
+	 * @returns {boolean} true unless node has been killed recently
+	 */
+	function isLive( id ) {
+		return liveNodes.some( node => node.options.id === id );
 	}
 };

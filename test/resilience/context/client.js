@@ -10,6 +10,7 @@ const keys = [ "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", 
 const defaultOptions = {
 	duration: 60000,
 	retryTimeout: 500,
+	isLive() { return true; },
 };
 
 
@@ -223,12 +224,7 @@ class ResilienceTestClient extends EventEmitter {
 	 * @returns {PeerAddress} address of endpoint
 	 */
 	pickEndpoint() {
-		let endpoint = this.leader;
-		if ( !endpoint ) {
-			endpoint = this.endpoints[Math.floor( Math.random() * this.endpoints.length )];
-		}
-
-		return endpoint;
+		return this.endpoints[Math.floor( Math.random() * this.endpoints.length )];
 	}
 
 	/**
@@ -274,6 +270,13 @@ class ResilienceTestClient extends EventEmitter {
 				setImmediate( retry );
 				break;
 
+			case "ECONNREFUSED" :
+				if ( !this.options.isLive( endpoint ) ) {
+					setTimeout( retry, 1000 );
+					break;
+				}
+
+				// falls through
 			default :
 				onFailed( new Error( `response status code was ${statusCode}, response: ${payload}` ) );
 		}

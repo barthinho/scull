@@ -10,7 +10,7 @@ require( "debug" ).enable();
 suite( "resilience, no chaos, in memory", function() {
 	this.timeout( 30000 );
 
-	const { before, after, addresses } = Setup( { chaos: false } );
+	const { before, after, addresses, isLive } = Setup( { chaos: false } );
 
 	setup( before );
 	teardown( after );
@@ -25,6 +25,7 @@ suite( "resilience, no chaos, in memory", function() {
 
 			const client = new ResilienceTestClient( addresses, {
 				duration: 120000,
+				isLive,
 			} );
 
 			resetOperationTimeout();
