@@ -17,7 +17,7 @@ describe( "remote commands", () => {
 	];
 
 	before( done => {
-		nodes = nodeAddresses.map( ( address ) =>
+		nodes = nodeAddresses.map( address =>
 			Shell( address, {
 				db: MemDown,
 				peers: nodeAddresses.filter( addr => addr !== address )

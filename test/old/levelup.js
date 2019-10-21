@@ -17,7 +17,7 @@ describe( "levelup", () => {
 	];
 
 	before( done => {
-		nodes = nodeAddresses.map( ( address ) =>
+		nodes = nodeAddresses.map( address =>
 			Shell( address, {
 				db: MemDown,
 				peers: nodeAddresses.filter( addr => addr !== address )
@@ -120,7 +120,7 @@ describe( "levelup", () => {
 				{ key: "key e", value: "value e" }
 			];
 
-			rs.on( "data", ( data ) => {
+			rs.on( "data", data => {
 				expect( data ).to.equal( expecteds.shift() );
 				if ( expecteds.length === 0 ) {
 					done();

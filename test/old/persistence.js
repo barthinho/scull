@@ -47,7 +47,7 @@ describe( "persistence", () => {
 
 	before( done => {
 		// restart nodes
-		nodes = nodeAddresses.map( ( address ) =>
+		nodes = nodeAddresses.map( address =>
 			Shell( address, {
 				db: MemDown,
 				peers: nodeAddresses.filter( addr => addr !== address )

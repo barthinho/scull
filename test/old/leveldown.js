@@ -128,8 +128,10 @@ describe( "leveldown", () => {
 					iterator.next( ( err, key, value ) => {
 						if ( !err && !key ) {
 							stopped = true;
-							return cb();
+							cb();
+							return;
 						}
+
 						expect( err ).to.be.null();
 						expect( { key, value } ).to.equal( expecteds.shift() );
 						cb( err );
