@@ -104,7 +104,7 @@ Promise.all( [
 function encodeError( error ) {
 	return JSON.stringify( {
 		error: {
-			message: error.message,
+			message: error.stack,
 			code: error.code,
 			leader: error.leader
 		}
