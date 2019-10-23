@@ -241,6 +241,9 @@ class ResilienceTestClient extends EventEmitter {
 				fetch( Object.assign( {}, endpoint, {
 					method: "GET",
 					path: `/${key}`,
+					headers: {
+						"x-consensus": secondChance ? 1 : 0,
+					},
 				} ) )
 					.then( response => this.parseResponse( response, endpoint, 200, tryGet, value => {
 						if ( Number( value ) === expectedValue ) {
@@ -249,7 +252,7 @@ class ResilienceTestClient extends EventEmitter {
 							reject( new Error( Utility.format( `GETting from %j for key ${key}: expected ${expectedValue}, got %j`, endpoint, value ) ) );
 						} else {
 							secondChance = true;
-							setTimeout( tryGet, 200 );
+							process.nextTick( tryGet );
 						}
 					}, reject ) )
 					.catch( error => this.parseError( error, tryGet, reject ) );

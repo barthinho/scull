@@ -54,7 +54,9 @@ const server = Http.createServer( function( req, res ) {
 		}
 
 		case "GET" :
-			db.get( key, generateDbResultHandler( key, res ) );
+			db.get( key, {
+				seekConsensus: Boolean( req.headers["x-consensus"] ),
+			}, generateDbResultHandler( key, res ) );
 			break;
 
 		default :
