@@ -12,21 +12,23 @@ suite( "resilience, chaos, on disk", function() {
 	const { before, after, addresses, isLive } = Setup( {
 		chaos: true,
 		persist: true,
+		nodeCount: 10,
 	} );
 
 	setup( before );
 	teardown( after );
 
 
+	const duration = Math.min( parseInt( process.env.DURATION_MINS ) || 60, 1 );
+
 	test( "works", function() {
-		this.timeout( 125000 );
+		this.timeout( ( duration * 60000 ) + 120000 );
 
 		return new Promise( ( resolve, reject ) => {
 			let timeout = null;
 
-
 			const client = new ResilienceTestClient( addresses, {
-				duration: 120000,
+				duration: duration * 60000,
 				isLive,
 			} );
 
