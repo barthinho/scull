@@ -10,22 +10,22 @@
 
 This package was started as a fork of package [skiff](https://www.npmjs.com/package/skiff) by Pedro Teixeira.
 
-While reading, revising and refactoring original code, trying to understand the project and fixing some encountered issues we've planned to keep this fork tightly bound to the original package by using similar name, sharing version numbers and probably providing revisions back upstream. But on starting to introduce changes breaking existing API as well as trying to replace some downsides of existing code with more efficient features we considered our fork significantly moving away from its origin. That's why we chose to switch its name to express this stronger separation.
+While reading, revising and refactoring original code, trying to understand the project and fixing some encountered issues we've planned to keep this fork tightly bound to the original project and provide revisions back upstream. By introducing breaking changes and trying to replace some downsides of existing code with more efficient features this aim had to be dropped though.
 
 ## Motivation
 
-The original [skiff](https://www.npmjs.com/package/skiff) has been forked to adopt it's abilities for implementing an application-cluster backend for our [hitchy framework](http://hitchyjs.org). Even though this sounds like the now called project **scull** being tightly bound to hitchy we guarantee it's not. The fork has been started to refactor parts of code, modernizing its API and adding some commands to cluster missing in original project. We basically intend to keep this project mostly API compatible to [skiff](https://www.npmjs.com/package/skiff), too.
+The original [skiff](https://www.npmjs.com/package/skiff) has been forked to adopt it's abilities for implementing an application-cluster backend for our [hitchy framework](http://hitchyjs.org). Even though this sounds like the now called project **scull** being tightly bound to hitchy we guarantee it's not. The fork has been started to refactor parts of code, modernizing its API and adding some cluster commands missing in original project.
 
 ## Features
 
-* Persists to LevelDB (or any database exposing a [LevelDOWN](https://github.com/level/leveldown) interface).
+* Implements [Raft Consensus Algorithm](https://raft.github.io/).
+* Persists to LevelDB or any database exposing a [LevelDOWN](https://github.com/level/leveldown) interface.
 * Exposes the cluster as a [LevelUP](https://github.com/level/levelup#readme) or [LevelDOWN](https://github.com/level/leveldown#readme)-compatible interface, with which you can extend using [the LevelUP plugins](https://github.com/Level/levelup/wiki/Modules#plugins).
-* Encodes messages using Msgpack
 
 ## Installation
 
 ```bash
-$ npm install scull --save
+$ npm install scull
 ```
 
 ## Usage
