@@ -6,8 +6,8 @@
   "scripts": {
     "lint": "eslint .",
     "test": "mocha test/unit/**/*.js",
-    "resilience-basic": "mocha test/resilience/*.js --exclude *.plus.js",
-    "resilience-plus": "mocha test/resilience/*.plus.js --exclude *.plus.js",
+    "resilience-basic": "mocha test/resilience/*.js --exclude **/*.plus.js",
+    "resilience-plus": "mocha test/resilience/*.plus.js --exclude **/*.plus.js",
     "coverage": "nyc mocha test/unit/**/*.js"
   },
   "repository": {
@@ -31,7 +31,8 @@
   },
   "homepage": "https://github.com/hitchyjs/scull#readme",
   "devDependencies": {
-    "eslint": "^6.5.1",
+    "cross-env": "^6.0.3",
+    "eslint": "^6.8.0",
     "eslint-config-cepharum": "^1.0.10",
     "eslint-plugin-promise": "^4.2.1",
     "file-essentials": "^0.0.13",
@@ -42,14 +43,14 @@
     "split": "^1.0.1"
   },
   "dependencies": {
-    "abstract-leveldown": "^6.2.1",
+    "abstract-leveldown": "^6.2.2",
     "debug": "^4.1.1",
     "level-sublevel": "^6.6.5",
-    "leveldown": "^5.4.0",
+    "leveldown": "^5.4.1",
     "levelup": "^4.3.2",
     "msgpack5": "^4.2.1",
-    "multiaddr": "^7.1.0",
-    "promise-essentials": "^0.0.8",
+    "multiaddr": "^7.2.1",
+    "promise-essentials": "^0.1.0",
     "reconnect-core": "^1.3.0"
   }
 }
