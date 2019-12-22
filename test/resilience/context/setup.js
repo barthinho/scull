@@ -13,6 +13,25 @@ const { RmDir, MkDir } = require( "file-essentials" );
 const HttpServerNode = require( "./http-server/process" );
 
 
+console.log( `
+
+ABOUT
+
+Chaotic resilience tests starts local-only cluster consisting of multiple nodes
+just to have them read and write several values in a shared database for some
+time while killing and re-starting its nodes over time. This test is failing
+whenever cluster of nodes isn't processing requested read/write operation in
+time or when reading some value delivers unexpected result.
+
+IMPORTANT
+
+Errors listed below are fine as long as the test runner keeps running for those
+errors are mostly due to the killing of nodes, only, and thus intended behaviour
+in context of chaotic resilience tests.
+
+` );
+
+
 const defaultOptions = {
 	persist: false,
 	chaos: true,
