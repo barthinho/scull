@@ -49,8 +49,18 @@ module.exports = function Setup( _options ) {
 	const dataPath = Path.resolve( __dirname, "..", "data" );
 
 	let killing = true;
+	let logger = null;
 
 	return { before, after, addresses: allAddresses, isLive };
+
+
+	function timeLogger( minute ) {
+		console.log( `time elapsed: ${minute} minute(s)` );
+
+		if ( this.running ) {
+			logger = setTimeout( timeLogger, 60000, minute + 1 );
+		}
+	}
 
 
 	/**
@@ -59,6 +69,8 @@ module.exports = function Setup( _options ) {
 	 * @returns {Promise} promises map of started nodes after setup finished with all nodes running initiall
 	 */
 	function before() {
+		logger = setTimeout( timeLogger, 60000, 1 );
+
 		return setupDirs()
 			.then( () => createAllNodes() )
 			.then( () => startAllNodes() )
@@ -71,6 +83,8 @@ module.exports = function Setup( _options ) {
 	 * @returns {Promise} promises network of nodes being shut down properly
 	 */
 	function after() {
+		clearTimeout( logger );
+
 		return stopKiller()
 			.then( () => stopAllNodes() );
 	}

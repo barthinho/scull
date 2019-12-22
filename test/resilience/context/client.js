@@ -113,14 +113,6 @@ class ResilienceTestClient extends EventEmitter {
 	start() {
 		this.running = true;
 
-		const timelogger = minute => {
-			console.log( `time elapsed: ${minute} minute(s)` );
-			if ( this.running ) {
-				setTimeout( timelogger, 60000, minute + 1 );
-			}
-		};
-		setTimeout( timelogger, 60000, 0 );
-
 		return new Promise( ( resolve, reject ) => {
 			const putInitial = ( index, stopAt ) => {
 				if ( index >= stopAt ) {
