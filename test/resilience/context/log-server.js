@@ -93,7 +93,6 @@ class LogServer {
 			 */
 			_socket: {
 				value: UDP.createSocket( "udp4", ( msg, rinfo ) => {
-					console.log( "got message", msg.toString( "utf8" ) );
 					if ( write === _size ) {
 						this.logs.splice( 0, 1 );
 						write--;
@@ -164,9 +163,9 @@ class LogServer {
 	 * @returns {void}
 	 */
 	static transmitLog( message ) {
-		console.log( message ); // eslint-disable-line no-console
+		process.stderr.write( message + "\n" );
+
 		const { DEBUG_LOG_SERVER_NAME, DEBUG_LOG_SERVER_PORT } = process.env;
-		console.log( "wanna transmit", DEBUG_LOG_SERVER_NAME, DEBUG_LOG_SERVER_PORT );
 
 		if ( DEBUG_LOG_SERVER_NAME && DEBUG_LOG_SERVER_PORT ) {
 			if ( !client ) {
