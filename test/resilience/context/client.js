@@ -6,8 +6,11 @@ const Utility = require( "util" );
 
 const MultiAddress = require( "multiaddr" );
 const ClientLog = require( "debug" )( "scull:resilience:client" );
+const LogServer = require( "./log-server" );
 
-// require( "debug" ).enable( "scull:resilience:client" );
+// ClientLog.log = LogServer.log;
+ClientLog.log = LogServer.collect;
+ClientLog.enabled = true;
 
 const keys = [ "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "x", "y", "z" ];
 const defaultOptions = {

@@ -6,6 +6,8 @@ const Path = require( "path" );
 
 const Split = require( "split" );
 
+const LogServer = require( "../log-server" );
+
 
 /**
  * Manages sub-process for running single node in a scull cluster exposing API
@@ -63,63 +65,68 @@ class HttpServerNode extends EventEmitter {
 	 * @returns {Promise} promises sub-process started successfully
 	 */
 	start() {
-		return new Promise( ( resolve, reject ) => {
-			/**
-			 * @name HttpServerNode#_child
-			 * @type {ChildProcess}
-			 * @protected
-			 */
-			this._child = fork( Path.join( __dirname, "code.js" ), [
-				this.port,
-				JSON.stringify( this.options ),
-			], {
-				silent: true,
-				env: { DEBUG: "*" },
-			} );
+		return LogServer.get().address
+			.then( ( { address, port } ) => new Promise( ( resolve, reject ) => {
+				/**
+				 * @name HttpServerNode#_child
+				 * @type {ChildProcess}
+				 * @protected
+				 */
+				this._child = fork( Path.join( __dirname, "code.js" ), [
+					this.port,
+					JSON.stringify( this.options ),
+				], {
+					silent: true,
+					env: {
+						DEBUG: "*",
+						DEBUG_LOG_SERVER_NAME: address,
+						DEBUG_LOG_SERVER_PORT: port,
+					},
+				} );
 
-			let warned = false;
+				let warned = false;
 
-			// pass output of current node adding some identifying prefix to every line
-			[ "stdout", "stderr" ]
-				.forEach( channel => {
-					this._child[channel]
-						.pipe( Split() )
-						.on( "data", line => {
-							const _line = line.trim();
-							if ( _line ) {
-								process[channel].write( `${this.port} ${`(${this._child.pid})`.padStart( 7 )}: ${_line}\n` );
+				// pass output of current node adding some identifying prefix to every line
+				["stdout", "stderr"]
+					.forEach( channel => {
+						this._child[channel]
+							.pipe( Split() )
+							.on( "data", line => {
+								const _line = line.trim();
+								if ( _line ) {
+									process[channel].write( `${this.port} ${`(${this._child.pid})`.padStart( 7 )}: ${_line}\n` );
 
-								if ( channel === "stderr" && !warned ) {
-									warned = true;
-									this.emit( "warning" );
+									if ( channel === "stderr" && !warned ) {
+										warned = true;
+										this.emit( "warning" );
+									}
 								}
-							}
-						} );
-				} );
+							} );
+					} );
 
-			this._child.stdout
-				.pipe( Split() )
-				.once( "data", line => {
-					if ( line.match( /started/ ) ) {
-						resolve();
-						return;
-					}
+				this._child.stdout
+					.pipe( Split() )
+					.once( "data", line => {
+						if ( line.match( /started/ ) ) {
+							resolve();
+							return;
+						}
 
-					if ( this.exiting ) {
-						resolve();
-						return;
-					}
+						if ( this.exiting ) {
+							resolve();
+							return;
+						}
 
-					reject( new Error( `Could not start child, first line of output was: ${line}` ) );
-				} );
+						reject( new Error( `Could not start child, first line of output was: ${line}` ) );
+					} );
 
-			this._child
-				.once( "exit", ( code, signal ) => {
-					if ( !this.exiting ) {
-						this.emit( "error", new Error( `child at port ${this.port} exited unexpectedly, code = ${code}, signal = ${signal}` ) );
-					}
-				} );
-		} );
+				this._child
+					.once( "exit", ( code, signal ) => {
+						if ( !this.exiting ) {
+							this.emit( "error", new Error( `child at port ${this.port} exited unexpectedly, code = ${code}, signal = ${signal}` ) );
+						}
+					} );
+			} ) );
 	}
 
 	/**

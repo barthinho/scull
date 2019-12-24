@@ -9,7 +9,7 @@ const ResilienceTestClient = require( "./context/client" );
 suite( "resilience, chaos, in memory", function() {
 	this.timeout( 30000 );
 
-	const { before, after, addresses, isLive } = Setup();
+	const { before, after, addresses, isLive, LogServer } = Setup();
 
 	setup( before );
 	teardown( after );
@@ -36,12 +36,12 @@ suite( "resilience, chaos, in memory", function() {
 			client.start()
 				.then( () => {
 					clearTimeout( timeout );
-					console.log( "stats: %j", client.stats ); // eslint-disable-line no-console
+					LogServer.log( "stats: %j", client.stats );
 					resolve();
 				} )
 				.catch( error => {
 					clearTimeout( timeout );
-					console.log( "stats: %j", client.stats ); // eslint-disable-line no-console
+					LogServer.log( "stats: %j", client.stats );
 					reject( error );
 				} );
 
@@ -69,6 +69,7 @@ suite( "resilience, chaos, in memory", function() {
 
 				timeout = setTimeout( onOperationTimeout, 11000 );
 			}
-		} );
+		} )
+			.catch( error => LogServer.dump( 1 ).then( () => { throw error; } ) );
 	} );
 } );

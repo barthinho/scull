@@ -10,8 +10,16 @@
 
 const Http = require( "http" );
 const { join } = require( "path" );
+const util = require( "util" );
 
 const MemDown = require( "memdown" );
+
+const LogServer = require( "../log-server" );
+
+// always enable debugging, but transmit to common log server instead of logging on console
+const Debug = require( "debug" );
+Debug.enabled = () => true;
+Debug.log = LogServer.transmitLog;
 
 const Shell = require( "../../../../" );
 
@@ -72,14 +80,14 @@ Promise.all( [
 	node.start( true ),
 ] )
 	.then( () => {
-		console.log( `server ${address} started${node.is( "leader" ) ? " as leader" : ""}` ); // eslint-disable-line no-console
+		LogServer.log( `server ${address} started${node.is( "leader" ) ? " as leader" : ""}` );
 
 		node.on( "new state", ( state, oldState ) => {
 			const now = Date.now();
 			const delay = now - timer;
 			timer = now;
 
-			console.log( "new state: %s -> %s   %s ms", ( oldState || "" ).padStart( 10 ), state.padStart( 10 ), String( "+" + delay ).padStart( 6 ) );
+			LogServer.log( "new state: %s -> %s   %s ms", ( oldState || "" ).padStart( 10 ), state.padStart( 10 ), String( "+" + delay ).padStart( 6 ) );
 		} );
 
 		node.on( "up-to-date", () => {
@@ -87,11 +95,11 @@ Promise.all( [
 			const delay = now - timer;
 			timer = now;
 
-			console.log( "up-to-date   %s ms", String( "+" + delay ).padStart( 6 ) );
+			LogServer.log( "up-to-date   %s ms", String( "+" + delay ).padStart( 6 ) );
 		} );
 	} )
 	.catch( error => {
-		console.log( `server ${address} failed: ${error.message}` ); // eslint-disable-line no-console
+		LogServer.log( `server ${address} failed: ${error.message}` );
 		throw error;
 	} );
 

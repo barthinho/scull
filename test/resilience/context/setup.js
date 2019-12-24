@@ -11,25 +11,8 @@ const Path = require( "path" );
 const { RmDir, MkDir } = require( "file-essentials" );
 
 const HttpServerNode = require( "./http-server/process" );
+const LogServer = require( "./log-server" );
 
-
-console.log( `
-
-ABOUT
-
-Chaotic resilience tests starts local-only cluster consisting of multiple nodes
-just to have them read and write several values in a shared database for some
-time while killing and re-starting its nodes over time. This test is failing
-whenever cluster of nodes isn't processing requested read/write operation in
-time or when reading some value delivers unexpected result.
-
-IMPORTANT
-
-Errors listed below are fine as long as the test runner keeps running for those
-errors are mostly due to the killing of nodes, only, and thus intended behaviour
-in context of chaotic resilience tests.
-
-` );
 
 
 const defaultOptions = {
@@ -38,6 +21,9 @@ const defaultOptions = {
 	nodeCount: 3,
 	killerIntervalMS: 10000
 };
+
+
+const logServer = LogServer.get();
 
 module.exports = function Setup( _options ) {
 	let killer, liveNodes, active;
@@ -51,7 +37,7 @@ module.exports = function Setup( _options ) {
 	let killing = true;
 	let logger = null;
 
-	return { before, after, addresses: allAddresses, isLive };
+	return { before, after, addresses: allAddresses, isLive, LogServer };
 
 
 	function timeLogger( minute ) {
@@ -71,7 +57,8 @@ module.exports = function Setup( _options ) {
 	function before() {
 		logger = setTimeout( timeLogger, 60000, 1 );
 
-		return setupDirs()
+		return LogServer.get().socket
+			.then( () => setupDirs() )
 			.then( () => createAllNodes() )
 			.then( () => startAllNodes() )
 			.then( () => startKiller() );
@@ -86,7 +73,8 @@ module.exports = function Setup( _options ) {
 		clearTimeout( logger );
 
 		return stopKiller()
-			.then( () => stopAllNodes() );
+			.then( () => stopAllNodes() )
+			.then( () => LogServer.drop() );
 	}
 
 	/**
@@ -184,7 +172,7 @@ module.exports = function Setup( _options ) {
 		const node = liveNodes.splice( Math.floor( Math.random() * liveNodes.length ), 1 )[0];
 		const { port, options: { id } } = node;
 
-		console.log( "killing %s...", port ); // eslint-disable-line no-console
+		LogServer.log( "killing %s...", port );
 
 		deadNodeAdresses.push( { port, id } );
 
@@ -199,7 +187,7 @@ module.exports = function Setup( _options ) {
 	function reviveOne() {
 		const { port, id } = deadNodeAdresses.splice( Math.floor( Math.random() * deadNodeAdresses.length ), 1 )[0];
 
-		console.log( "reviving %s...", port ); // eslint-disable-line no-console
+		LogServer.log( "reviving %s...", port );
 
 		const node = new HttpServerNode( port, {
 			id: id,

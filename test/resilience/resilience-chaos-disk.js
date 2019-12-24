@@ -9,7 +9,7 @@ const ResilienceTestClient = require( "./context/client" );
 suite( "resilience, chaos, on disk", function() {
 	this.timeout( 30000 );
 
-	const { before, after, addresses, isLive } = Setup( {
+	const { before, after, addresses, isLive, LogServer } = Setup( {
 		chaos: true,
 		persist: true,
 		nodeCount: 10,
@@ -22,6 +22,8 @@ suite( "resilience, chaos, on disk", function() {
 	const duration = Math.min( parseInt( process.env.DURATION_MINS ) || 60, 1 );
 
 	test( "works", function() {
+		LogServer.log( "starting test for %d minute(s)", duration );
+
 		this.timeout( ( duration * 60000 ) + 120000 );
 
 		return new Promise( ( resolve, reject ) => {
@@ -41,12 +43,12 @@ suite( "resilience, chaos, on disk", function() {
 			client.start()
 				.then( () => {
 					clearTimeout( timeout );
-					console.log( "stats: %j", client.stats ); // eslint-disable-line no-console
+					LogServer.log( "stats: %j", client.stats );
 					resolve();
 				} )
 				.catch( error => {
 					clearTimeout( timeout );
-					console.log( "stats: %j", client.stats ); // eslint-disable-line no-console
+					LogServer.log( "stats: %j", client.stats );
 					reject( error );
 				} );
 
@@ -74,6 +76,7 @@ suite( "resilience, chaos, on disk", function() {
 
 				timeout = setTimeout( onOperationTimeout, 11000 );
 			}
-		} );
+		} )
+			.catch( error => LogServer.dump( 1 ).then( () => { throw error; } ) );
 	} );
 } );
