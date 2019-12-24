@@ -15,7 +15,6 @@ const MemDown = require( "memdown" );
 
 const Shell = require( "../../../../" );
 
-
 const port = Number( process.argv[2] );
 const address = `/ip4/127.0.0.1/tcp/${port}`;
 const options = Object.assign( {},
@@ -55,7 +54,7 @@ const server = Http.createServer( function( req, res ) {
 
 		case "GET" :
 			db.get( key, {
-				seekConsensus: Boolean( req.headers["x-consensus"] ),
+				seekConsensus: Boolean( req.headers["x-consensus"] || req.headers["x-consensus"] == null ),
 			}, generateDbResultHandler( key, res ) );
 			break;
 
