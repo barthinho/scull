@@ -15,15 +15,19 @@ suite( "resilience, no chaos, in memory", function() {
 	teardown( after );
 
 
+	const duration = Math.max( parseInt( process.env.DURATION_MINS ) || 10, 1 );
+
 	test( "works", function() {
-		this.timeout( 125000 );
+		LogServer.log( "starting test for %d minute(s)", duration );
+
+		this.timeout( ( duration * 60000 ) + 120000 );
 
 		return new Promise( ( resolve, reject ) => {
 			let timeout = null;
 
 
 			const client = new ResilienceTestClient( addresses, {
-				duration: 120000,
+				duration: duration * 60000,
 				isLive,
 			} );
 

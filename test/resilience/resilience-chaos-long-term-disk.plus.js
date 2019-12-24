@@ -18,15 +18,19 @@ suite( "resilience, chaos, on disk, longer term", function() {
 	teardown( after );
 
 
+	const duration = Math.max( parseInt( process.env.DURATION_MINS ) || 60, 1 );
+
 	test( "works", function() {
-		this.timeout( 3605000 );
+		LogServer.log( "starting test for %d minute(s)", duration );
+
+		this.timeout( ( duration * 60000 ) + 120000 );
 
 		return new Promise( ( resolve, reject ) => {
 			let timeout = null;
 
 
 			const client = new ResilienceTestClient( addresses, {
-				duration: 3600000,
+				duration: duration * 60000,
 				isLive,
 			} );
 

@@ -17,13 +17,29 @@ const defaultOptions = {
 	duration: 60000,
 	retryTimeout: 500,
 	isLive() { return true; },
+	nextStep( endpoints, options, pc ) {
+		return {
+			key: keys[Math.floor( Math.random() * keys.length )],
+			put: Math.random() >= 0.5,
+		};
+	}
 };
 
 
 /**
  * @typedef {object} PeerAddress
+ * @property {string} rawAddress original address in multiaddr format
  * @property {string} hostname name of peer's host
  * @property {int} port peer's port number
+ */
+
+/**
+ * @typedef {function(endpoints: Array<PeerAddress>, options: ResilienceTestClientOptions, pc: int):{endpoint: PeerAddress, key: string, put: Boolean}} StepGenerator
+ */
+
+/**
+ * @typedef {object} ResilienceTestClientOptions
+ * @property {StepGenerator} nextStep callback invoked to describe next client action to perform
  */
 
 /**
@@ -35,7 +51,7 @@ const defaultOptions = {
 class ResilienceTestClient extends EventEmitter {
 	/**
 	 * @param {Address[]|string[]} addresses lists addresses of currently available peers
-	 * @param {object} options customizing options
+	 * @param {ResilienceTestClientOptions} options customizing options
 	 */
 	constructor( addresses, options ) {
 		super();
@@ -75,15 +91,6 @@ class ResilienceTestClient extends EventEmitter {
 
 		Object.defineProperties( this, {
 			/**
-			 * Lists IDs/addresses of all currently available endpoints.
-			 *
-			 * @name Client#addresses
-			 * @property {Address[]}
-			 * @readonly
-			 */
-			addresses: { value: addresses.slice( 0 ) },
-
-			/**
 			 * Lists addresses of all currently available endpoints for sending
 			 * requests to.
 			 *
@@ -102,10 +109,41 @@ class ResilienceTestClient extends EventEmitter {
 			 */
 			values: { value: {} },
 		} );
+	}
 
+	before() {
 		for ( let i = 0; i < keys.length; i++ ) {
 			this.values[keys[i]] = -1;
 		}
+
+		console.log( "resetting database ..." );
+
+		return new Promise( ( resolve, reject ) => {
+			const putInitial = ( index, stopAt ) => {
+				if ( index >= stopAt ) {
+					console.log( "database reset" );
+
+					setTimeout( resolve, 200 );
+				} else {
+					this.makeOnePutRequest( this.pickEndpoint(), keys[index] )
+						.then( () => {
+							process.nextTick( putInitial, index + 1, stopAt );
+						} )
+						.catch( reject );
+				}
+			};
+
+			putInitial( 0, keys.length );
+		} );
+	}
+
+	after() {
+		console.log( "checking database ..." );
+
+		return new Promise( ( resolve, reject ) => {
+			console.log( "database checked" );
+			resolve();
+		} );
 	}
 
 	/**
@@ -116,27 +154,19 @@ class ResilienceTestClient extends EventEmitter {
 	start() {
 		this.running = true;
 
-		return new Promise( ( resolve, reject ) => {
-			const putInitial = ( index, stopAt ) => {
-				if ( index >= stopAt ) {
-					setTimeout( resolve, 200 );
-				} else {
-					this.makeOnePutRequest( keys[index] )
-						.then( () => {
-							process.nextTick( putInitial, index + 1, stopAt );
-						} )
-						.catch( reject );
-				}
-			};
-
-			putInitial( 0, keys.length );
-		} )
+		return this.before()
 			.then( () => new Promise( ( resolve, reject ) => {
 				this.timeout = setTimeout( () => {
 					this.running = false;
 				}, this.options.duration );
 
-				this.work( error => ( error ? reject( error ) : resolve() ) );
+				this.work( error => {
+					if ( error ) {
+						reject( error );
+					} else {
+						this.after().then( resolve ).catch( reject );
+					}
+				} );
 			} ) );
 	}
 
@@ -147,9 +177,13 @@ class ResilienceTestClient extends EventEmitter {
 	 * @returns {void}
 	 */
 	work( doneFn ) {
-		this.stats.operationsStarted++;
+		let { endpoint, key, put } = this.options.nextStep( this.endpoints, this.options, this.stats.operationsStarted++ ) || {};
 
-		this.makeOneRequest()
+		if ( endpoint == null ) {
+			endpoint = this.pickEndpoint();
+		}
+
+		( put ? this.makeOnePutRequest( endpoint, key ) : this.makeOneGetRequest( endpoint, key ) )
 			.then( () => {
 				this.emit( "operation" );
 
@@ -167,26 +201,16 @@ class ResilienceTestClient extends EventEmitter {
 	}
 
 	/**
-	 * Randomly issues another request for either writing or reading value
-	 * associated with random key to/from endpoint.
-	 *
-	 * @returns {Promise} promises successful request for either reading or writing value
-	 */
-	makeOneRequest() {
-		const key = keys[Math.floor( Math.random() * keys.length )];
-
-		return Math.random() >= 0.5 ? this.makeOnePutRequest( key ) : this.makeOneGetRequest( key );
-	}
-
-	/**
 	 * Issues request for writing value at current endpoint to be associated w/
 	 * provided key.
 	 *
+	 * @param {PeerAddress} endpoint node of cluster to query for request
 	 * @param {string} key key to be fetched from endpoint
 	 * @returns {Promise} promise value written successfully after optionally retrying request on recoverable errors
 	 */
-	makeOnePutRequest( key ) {
+	makeOnePutRequest( endpoint, key ) {
 		const value = String( ++this.values[key] );
+		let attempts = 0;
 
 		ClientLog( `PUT ${key} = %j ???`, value );
 
@@ -197,15 +221,19 @@ class ResilienceTestClient extends EventEmitter {
 			 * @returns {void}
 			 */
 			const tryPut = () => {
-				const endpoint = this.pickEndpoint();
+				let peer = endpoint;
 
-				ClientLog( `... ${endpoint.port}`, value );
+				if ( attempts > 2 ) {
+					peer = this.pickEndpoint();
+				}
 
-				fetch( Object.assign( {}, endpoint, {
+				ClientLog( `... ${peer.port} @${++attempts}`, value );
+
+				fetch( Object.assign( {}, peer, {
 					method: "PUT",
 					path: `/${key}`,
 				} ), value )
-					.then( response => this.parseResponse( response, endpoint, 201, tryPut, resolve, reject ) )
+					.then( response => this.parseResponse( response, peer, 201, tryPut, resolve, reject ) )
 					.catch( error => this.parseError( error, tryPut, reject ) );
 			};
 
@@ -221,12 +249,15 @@ class ResilienceTestClient extends EventEmitter {
 	 * Issues request for reading back value associated w/ given key from
 	 * current endpoint.
 	 *
+	 * @param {PeerAddress} endpoint node of cluster to query for request
 	 * @param {string} key key to be fetched from endpoint
 	 * @returns {Promise} promise value read back successfully after optionally retrying request on recoverable errors
 	 */
-	makeOneGetRequest( key ) {
+	makeOneGetRequest( endpoint, key ) {
 		const expectedValue = this.values[key];
-		let secondChance = false;
+		let fastGet = true;
+		let peer = endpoint;
+		let attempts = 0;
 
 		ClientLog( `GET ${key} ???` );
 
@@ -237,25 +268,29 @@ class ResilienceTestClient extends EventEmitter {
 			 * @returns {void}
 			 */
 			const tryGet = () => {
-				const endpoint = this.pickEndpoint();
+				if ( attempts > 2 ) {
+					peer = this.pickEndpoint();
+				}
 
-				ClientLog( `... ${endpoint.port}${secondChance ? " (2nd chance)" : ""}` );
+				ClientLog( `... ${peer.port} @${++attempts}${fastGet ? " (fast get)" : ""}` );
 
-				fetch( Object.assign( {}, endpoint, {
+				fetch( Object.assign( {}, peer, {
 					method: "GET",
 					path: `/${key}`,
-					headers: {
-						"x-consensus": secondChance ? 1 : 0,
-					},
+					headers: Object.assign( {}, fastGet ? {
+						"x-consensus": 0,
+					} : {} ),
 				} ) )
-					.then( response => this.parseResponse( response, endpoint, 200, tryGet, value => {
+					.then( response => this.parseResponse( response, peer, 200, tryGet, value => {
 						if ( Number( value ) === expectedValue ) {
+							// got expected value ...
 							resolve( value );
-						} else if ( secondChance || !this.running ) {
-							reject( new Error( Utility.format( `GETting from %j for key ${key}: expected ${expectedValue}, got %j`, endpoint, value ) ) );
-						} else {
-							secondChance = true;
+						} else if ( fastGet ) {
+							// haven't got expected value, but wasn't waiting for consensus, so try again w/ waiting
+							fastGet = false;
 							process.nextTick( tryGet );
+						} else {
+							reject( new Error( Utility.format( `GETting from %j for key ${key}: expected ${expectedValue}, got %j`, peer, value ) ) );
 						}
 					}, reject ) )
 					.catch( error => this.parseError( error, tryGet, reject ) );
@@ -270,24 +305,28 @@ class ResilienceTestClient extends EventEmitter {
 	}
 
 	/**
-	 * Retrieves address of current leader picking random endpoint if current
-	 * leader isn't known.
+	 * Randomly picks currently running endpoint returning its address.
 	 *
 	 * @returns {PeerAddress} address of endpoint
 	 */
 	pickEndpoint() {
+		const options = this.options;
+		const endpoints = this.endpoints;
+		const numEndpoints = endpoints.length;
 		const indexes = [];
 
 		for ( let i = 0; i < 100; i++ ) {
-			const index = Math.floor( Math.random() * this.endpoints.length );
+			const index = Math.floor( Math.random() * numEndpoints );
+			const endpoint = endpoints[index];
+
 			indexes.push( index );
 
-			if ( this.options.isLive( this.addresses[index] ) ) {
-				return this.endpoints[index];
+			if ( options.isLive( endpoint ) ) {
+				return endpoint;
 			}
 		}
 
-		throw new Error( require( "util" ).format( "RNG issue? failed picking endpoint: %j", indexes ) );
+		throw new Error( Utility.format( "RNG issue? failed picking endpoint: %j", indexes ) );
 	}
 
 	/**
@@ -334,7 +373,8 @@ class ResilienceTestClient extends EventEmitter {
 				break;
 
 			case "ECONNREFUSED" :
-				if ( !this.options.isLive( endpoint ) ) {
+				if ( !this.options.isLive( endpoint, true ) ) {
+					// endpoint might have been killed intermittently
 					setTimeout( retry, 1000 );
 					break;
 				}
@@ -375,10 +415,11 @@ class ResilienceTestClient extends EventEmitter {
 	 * @returns {PeerAddress} separately describes hostname and post of addressed endpoint
 	 */
 	static addressToUrl( address ) {
-		return {
-			hostname: "127.0.0.1",
-			port: Number( MultiAddress( address.toString() ).nodeAddress().port ) + 1,
-		};
+		return Object.create( {}, {
+			rawAddress: { value: address, enumerable: true },
+			hostname: { value: "127.0.0.1", enumerable: true },
+			port: { value: Number( MultiAddress( address.toString() ).nodeAddress().port ) + 1, enumerable: true },
+		} );
 	}
 }
 

@@ -12,14 +12,14 @@ suite( "resilience, chaos, on disk", function() {
 	const { before, after, addresses, isLive, LogServer } = Setup( {
 		chaos: true,
 		persist: true,
-		nodeCount: 10,
+		nodeCount: 3,
 	} );
 
 	setup( before );
 	teardown( after );
 
 
-	const duration = Math.min( parseInt( process.env.DURATION_MINS ) || 60, 1 );
+	const duration = Math.max( parseInt( process.env.DURATION_MINS ) || 10, 1 );
 
 	test( "works", function() {
 		LogServer.log( "starting test for %d minute(s)", duration );
@@ -32,6 +32,7 @@ suite( "resilience, chaos, on disk", function() {
 			const client = new ResilienceTestClient( addresses, {
 				duration: duration * 60000,
 				isLive,
+				nextStep: endpoints => ( { key: "c", put: true } ),
 			} );
 
 			resetOperationTimeout();

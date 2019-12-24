@@ -41,11 +41,12 @@ module.exports = function Setup( _options ) {
 
 
 	function timeLogger( minute ) {
-		console.log( `time elapsed: ${minute} minute(s)` );
-
-		if ( this.running ) {
-			logger = setTimeout( timeLogger, 60000, minute + 1 );
+		LogServer.log( `time elapsed: ${minute} minute(s)` );
+		if ( typeof _options.onTimeElapsed === "function" ) {
+			_options.onTimeElapsed( minute );
 		}
+
+		logger = setTimeout( timeLogger, 60000, minute + 1 );
 	}
 
 
@@ -55,6 +56,8 @@ module.exports = function Setup( _options ) {
 	 * @returns {Promise} promises map of started nodes after setup finished with all nodes running initiall
 	 */
 	function before() {
+		this.timeout( 10000 );
+
 		logger = setTimeout( timeLogger, 60000, 1 );
 
 		return LogServer.get().socket
@@ -224,10 +227,10 @@ module.exports = function Setup( _options ) {
 	 * Detects if provided endpoint ID/address selects node assumed to be live
 	 * currently.
 	 *
-	 * @param {string} id ID/address of node
+	 * @param {PeerAddress} endpoint description of node to test
 	 * @returns {boolean} true unless node has been killed recently
 	 */
-	function isLive( id ) {
-		return liveNodes.some( node => node.options.id === id );
+	function isLive( endpoint) {
+		return liveNodes.some( node => node.options.id === endpoint.rawAddress );
 	}
 };
