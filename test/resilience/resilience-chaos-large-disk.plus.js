@@ -13,7 +13,7 @@ suite.skip( "resilience, large cluster, chaos, on disk", function() {
 	const { before, after, addresses, isLive, LogServer } = Setup( {
 		chaos: true,
 		persist: true,
-		nodeCount: 7,
+		nodeCount: Math.max( process.env.NODES_COUNT || 7, 3 ),
 	} );
 
 	setup( before );

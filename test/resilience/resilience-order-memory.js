@@ -9,7 +9,10 @@ const ResilienceTestClient = require( "./context/client" );
 suite( "resilience, no chaos, in memory", function() {
 	this.timeout( 30000 );
 
-	const { before, after, addresses, isLive, LogServer } = Setup( { chaos: false } );
+	const { before, after, addresses, isLive, LogServer } = Setup( {
+		chaos: false,
+		nodeCount: Math.max( process.env.NODES_COUNT || 3, 3 ),
+	} );
 
 	setup( before );
 	teardown( after );

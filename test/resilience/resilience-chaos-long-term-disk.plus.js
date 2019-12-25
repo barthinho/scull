@@ -12,6 +12,7 @@ suite( "resilience, chaos, on disk, longer term", function() {
 	const { before, after, addresses, isLive, LogServer } = Setup( {
 		chaos: true,
 		persist: true,
+		nodeCount: Math.max( process.env.NODES_COUNT || 3, 3 ),
 	} );
 
 	setup( before );

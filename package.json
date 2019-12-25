@@ -7,6 +7,7 @@
     "lint": "eslint .",
     "test": "mocha test/unit/**/*.js",
     "resilience-basic": "mocha test/resilience/*.js --exclude **/*.plus.js",
+    "resilience-large": "cross-env NODE_COUNT=10 mocha test/resilience/*.js --exclude **/*.plus.js",
     "resilience-plus": "mocha test/resilience/*.plus.js --exclude **/*.plus.js",
     "coverage": "nyc mocha test/unit/**/*.js"
   },
