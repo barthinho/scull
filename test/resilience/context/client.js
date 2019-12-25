@@ -59,6 +59,8 @@ class ResilienceTestClient extends EventEmitter {
 		this.stats = {
 			operationsStarted: 0,
 			operationsCompleted: 0,
+			sumClusterLatency: 0,
+			sumClientLatency: 0,
 		};
 
 		/**
@@ -222,6 +224,7 @@ class ResilienceTestClient extends EventEmitter {
 	makeOnePutRequest( endpoint, key ) {
 		const value = String( ++this.values[key] );
 		let attempts = 0;
+		let started;
 
 		ClientLog( `PUT ${key} = %j ???`, value );
 
@@ -240,11 +243,22 @@ class ResilienceTestClient extends EventEmitter {
 
 				ClientLog( `... ${peer.port} @${++attempts}`, value );
 
+				if ( started == null ) {
+					started = Date.now();
+				}
+
 				fetch( Object.assign( {}, peer, {
 					method: "PUT",
 					path: `/${key}`,
 				} ), value )
-					.then( response => this.parseResponse( response, peer, 201, tryPut, resolve, reject ) )
+					.then( response => this.parseResponse( response, peer, 201, tryPut, () => {
+						const clientLatency = Date.now() - started;
+
+						this.stats.sumClusterLatency += parseInt( response.headers["x-latency"] ) || clientLatency;
+						this.stats.sumClientLatency += clientLatency;
+
+						resolve();
+					}, reject ) )
 					.catch( error => this.parseError( error, tryPut, reject ) );
 			};
 
@@ -266,6 +280,7 @@ class ResilienceTestClient extends EventEmitter {
 	 */
 	makeOneGetRequest( endpoint, key ) {
 		const expectedValue = this.values[key];
+		let started;
 		let fastGet = true;
 		let peer = endpoint;
 		let attempts = 0;
@@ -285,6 +300,10 @@ class ResilienceTestClient extends EventEmitter {
 
 				ClientLog( `... ${peer.port} @${++attempts}${fastGet ? " (fast get)" : ""}` );
 
+				if ( started == null ) {
+					started = Date.now();
+				}
+
 				fetch( Object.assign( {}, peer, {
 					method: "GET",
 					path: `/${key}`,
@@ -295,6 +314,11 @@ class ResilienceTestClient extends EventEmitter {
 					.then( response => this.parseResponse( response, peer, 200, tryGet, value => {
 						if ( Number( value ) === expectedValue ) {
 							// got expected value ...
+							const clientLatency = Date.now() - started;
+
+							this.stats.sumClusterLatency += parseInt( response.headers["x-latency"] ) || clientLatency;
+							this.stats.sumClientLatency += clientLatency;
+
 							resolve( value );
 						} else if ( fastGet ) {
 							// haven't got expected value, but wasn't waiting for consensus, so try again w/ waiting

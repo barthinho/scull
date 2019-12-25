@@ -16,8 +16,8 @@ const LogServer = require( "./log-server" );
 
 
 const defaultOptions = {
-	persist: false,
 	chaos: true,
+	persist: false,
 	nodeCount: 3,
 	killerIntervalMS: 10000
 };

@@ -129,7 +129,11 @@ function encodeError( error ) {
  * @returns {Function} callback handling result of any database action
  */
 function generateDbResultHandler( key, res, code = 200 ) {
+	let started = Date.now();
+
 	return function( err, value ) {
+		res.setHeader( "X-Latency", Date.now() - started );
+
 		if ( err ) {
 			if ( err.message.match( /not found/ ) ) {
 				res.statusCode = code || 200;
