@@ -141,8 +141,19 @@ class ResilienceTestClient extends EventEmitter {
 		console.log( "checking database ..." );
 
 		return new Promise( ( resolve, reject ) => {
-			console.log( "database checked" );
-			resolve();
+			const checkValue = ( index, stopAt ) => {
+				if ( index >= stopAt ) {
+					console.log( "database checked" );
+
+					setTimeout( resolve, 200 );
+				} else {
+					this.makeOneGetRequest( this.pickEndpoint(), keys[index] )
+						.then( () => process.nextTick( checkValue, index + 1, stopAt ) )
+						.catch( reject );
+				}
+			};
+
+			checkValue( 0, keys.length );
 		} );
 	}
 
