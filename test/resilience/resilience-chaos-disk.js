@@ -32,7 +32,7 @@ suite( "resilience, chaos, on disk", function() {
 			const client = new ResilienceTestClient( addresses, {
 				duration: duration * 60000,
 				isLive,
-				nextStep: endpoints => ( { key: "c", put: true } ),
+				// nextStep: endpoints => ( { key: "c", put: true } ),
 			} );
 
 			resetOperationTimeout();
