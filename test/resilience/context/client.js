@@ -59,8 +59,12 @@ class ResilienceTestClient extends EventEmitter {
 		this.stats = {
 			operationsStarted: 0,
 			operationsCompleted: 0,
-			sumClusterLatency: 0,
-			sumClientLatency: 0,
+			readOperationsCompleted: 0,
+			writeOperationsCompleted: 0,
+			sumClusterReadLatency: 0,
+			sumClientReadLatency: 0,
+			sumClusterWriteLatency: 0,
+			sumClientWriteLatency: 0,
 		};
 
 		/**
@@ -190,7 +194,8 @@ class ResilienceTestClient extends EventEmitter {
 	 * @returns {void}
 	 */
 	work( doneFn ) {
-		let { endpoint, key, put } = this.options.nextStep( this.endpoints, this.options, this.stats.operationsStarted++ ) || {};
+		const { options, stats } = this;
+		let { endpoint, key, put } = options.nextStep( this.endpoints, options, stats.operationsStarted++ ) || {};
 
 		if ( endpoint == null ) {
 			endpoint = this.pickEndpoint();
@@ -200,7 +205,13 @@ class ResilienceTestClient extends EventEmitter {
 			.then( () => {
 				this.emit( "operation" );
 
-				this.stats.operationsCompleted++;
+				stats.operationsCompleted++;
+
+				if ( put ) {
+					stats.writeOperationsCompleted++;
+				} else {
+					stats.readOperationsCompleted++;
+				}
 
 				if ( this.running ) {
 					process.nextTick( () => this.work( doneFn ) );
@@ -254,8 +265,8 @@ class ResilienceTestClient extends EventEmitter {
 					.then( response => this.parseResponse( response, peer, 201, tryPut, () => {
 						const clientLatency = Date.now() - started;
 
-						this.stats.sumClusterLatency += parseInt( response.headers["x-latency"] ) || clientLatency;
-						this.stats.sumClientLatency += clientLatency;
+						this.stats.sumClusterWriteLatency += parseInt( response.headers["x-latency"] ) || clientLatency;
+						this.stats.sumClientWriteLatency += clientLatency;
 
 						resolve();
 					}, reject ) )
@@ -316,8 +327,8 @@ class ResilienceTestClient extends EventEmitter {
 							// got expected value ...
 							const clientLatency = Date.now() - started;
 
-							this.stats.sumClusterLatency += parseInt( response.headers["x-latency"] ) || clientLatency;
-							this.stats.sumClientLatency += clientLatency;
+							this.stats.sumClusterReadLatency += parseInt( response.headers["x-latency"] ) || clientLatency;
+							this.stats.sumClientReadLatency += clientLatency;
 
 							resolve( value );
 						} else if ( fastGet ) {

@@ -123,17 +123,41 @@ module.exports = function( options ) {
 
 	function onTimeElapsed( minutes = null ) {
 		if ( client ) {
-			const { operationsStarted, operationsCompleted, sumClientLatency, sumClusterLatency } = client.stats;
-			const avgNetLatency = sumClusterLatency / operationsCompleted;
-			const avgGrossLatency = sumClientLatency / operationsCompleted;
+			const { operationsStarted, operationsCompleted,
+				readOperationsCompleted, writeOperationsCompleted,
+				sumClientReadLatency, sumClusterReadLatency,
+				sumClientWriteLatency, sumClusterWriteLatency } = client.stats;
 
-			LogServer.log( "%d started, %d completed at net latency %s ms/op (%s op/s), gross latency %s ms/op (%s op/s) %s",
+			LogServer.log( "%d started, %d completed %s",
 				operationsStarted, operationsCompleted,
+				minutes == null ? "" : `after ${minutes} minute(s)` );
+
+			const avgNetReadLatency = sumClusterReadLatency / readOperationsCompleted;
+			const avgGrossReadLatency = sumClientReadLatency / readOperationsCompleted;
+
+			LogServer.log( "net  read latency %s ms/op (%s op/s), gross  read latency %s ms/op (%s op/s)",
+				Math.round( 10 * avgNetReadLatency ) / 10,
+				Math.round( 10000 / avgNetReadLatency ) / 10,
+				Math.round( 10 * avgGrossReadLatency ) / 10,
+				Math.round( 10000 / avgGrossReadLatency ) / 10 );
+
+			const avgNetWriteLatency = sumClusterWriteLatency / writeOperationsCompleted;
+			const avgGrossWriteLatency = sumClientWriteLatency / writeOperationsCompleted;
+
+			LogServer.log( "net write latency %s ms/op (%s op/s), gross write latency %s ms/op (%s op/s)",
+				Math.round( 10 * avgNetWriteLatency ) / 10,
+				Math.round( 10000 / avgNetWriteLatency ) / 10,
+				Math.round( 10 * avgGrossWriteLatency ) / 10,
+				Math.round( 10000 / avgGrossWriteLatency ) / 10 );
+
+			const avgNetLatency = ( sumClusterWriteLatency + sumClusterReadLatency ) / operationsCompleted;
+			const avgGrossLatency = ( sumClientWriteLatency + sumClientReadLatency ) / operationsCompleted;
+
+			LogServer.log( "net total latency %s ms/op (%s op/s), gross total latency %s ms/op (%s op/s)",
 				Math.round( 10 * avgNetLatency ) / 10,
 				Math.round( 10000 / avgNetLatency ) / 10,
 				Math.round( 10 * avgGrossLatency ) / 10,
-				Math.round( 10000 / avgGrossLatency ) / 10,
-				minutes == null ? "" : `after ${minutes} minute(s)` );
+				Math.round( 10000 / avgGrossLatency ) / 10 );
 		}
 	}
 };
