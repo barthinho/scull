@@ -50,7 +50,7 @@ module.exports = function( options ) {
 		return;
 	}
 
-	const { before, after, addresses, isLive, LogServer } = Setup( Object.assign( {
+	const { before, after, addresses, isLive, LogServer, stopChaos } = Setup( Object.assign( {
 		nodeCount: Math.max( process.env.NODES_COUNT || 3, 3 ),
 		onTimeElapsed
 	}, options ) );
@@ -73,6 +73,7 @@ module.exports = function( options ) {
 				duration: duration * 60000,
 				isLive,
 				// nextStep: endpoints => ( { key: "c", put: true } ),
+				stopChaos,
 			} );
 
 			resetOperationTimeout();

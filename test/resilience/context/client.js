@@ -22,7 +22,8 @@ const defaultOptions = {
 			key: keys[Math.floor( Math.random() * keys.length )],
 			put: Math.random() >= 0.5,
 		};
-	}
+	},
+	stopChaos: () => Promise.resolve(),
 };
 
 
@@ -166,9 +167,10 @@ class ResilienceTestClient extends EventEmitter {
 	/**
 	 * Starts process of continuously querying peers for reading/writing values.
 	 *
+	 * @param {function:Promise} stopChaos callback provided to prevent any further killing of nodes
 	 * @returns {Promise} promises having passed all tests after defined runtime has elapsed
 	 */
-	start() {
+	start( { stopChaos } = {} ) {
 		this.running = true;
 
 		return this.before()
@@ -181,7 +183,9 @@ class ResilienceTestClient extends EventEmitter {
 					if ( error ) {
 						reject( error );
 					} else {
-						this.after().then( resolve ).catch( reject );
+						this.options.stopChaos()
+							.then( () => this.after().then( resolve ) )
+							.catch( reject ) ;
 					}
 				} );
 			} ) );

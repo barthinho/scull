@@ -35,9 +35,10 @@ module.exports = function Setup( _options ) {
 	const dataPath = Path.resolve( __dirname, "..", "data" );
 
 	let killing = true;
+	let chaos = false;
 	let logger = null;
 
-	return { before, after, addresses: allAddresses, isLive, LogServer };
+	return { before, after, addresses: allAddresses, isLive, LogServer, stopChaos };
 
 
 	function timeLogger( minute ) {
@@ -122,6 +123,31 @@ module.exports = function Setup( _options ) {
 	}
 
 	/**
+	 * Revives all currently dead nodes and prevents further killing of nodes.
+	 *
+	 * @returns {Promise} promises all currently dead nodes revived
+	 */
+	function stopChaos() {
+		chaos = false;
+
+		if ( deadNodeAdresses.length > 0 ) {
+			LogServer.log( "reviving all nodes" );
+		}
+
+		return new Promise( ( resolve, reject ) => {
+			recoverNode();
+
+			function recoverNode() {
+				if ( deadNodeAdresses.length > 0 ) {
+					reviveOne().then( () => process.nextTick( recoverNode ) ).catch( reject );
+				} else {
+					resolve();
+				}
+			}
+		} );
+	}
+
+	/**
 	 * Starts repeated process continuously killing randomly selected nodes in
 	 * cluster prior to reviving them.
 	 *
@@ -129,6 +155,8 @@ module.exports = function Setup( _options ) {
 	 */
 	function startKiller() {
 		if ( options.chaos ) {
+			chaos = true;
+
 			killer = setTimeout( () => {
 				active = killOrRevive()
 					.then( () => {
@@ -149,6 +177,10 @@ module.exports = function Setup( _options ) {
 	 * @returns {Promise} promises another node being killed or revived
 	 */
 	function killOrRevive() {
+		if ( !chaos ) {
+			return Promise.resolve();
+		}
+
 		if ( deadNodeAdresses.length >= maxDeadNodes ) {
 			killing = false;
 		} else if ( !deadNodeAdresses.length ) {
