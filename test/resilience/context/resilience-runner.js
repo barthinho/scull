@@ -64,7 +64,7 @@ module.exports = function( options ) {
 	test( "works", function() {
 		LogServer.log( "starting test for %d minute(s)", duration );
 
-		this.timeout( ( duration * 60000 ) + 120000 );
+		this.timeout( Math.max( duration + 2, duration * 1.02 ) * 60000 );
 
 		return new Promise( ( resolve, reject ) => {
 			let timeout = null;
