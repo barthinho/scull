@@ -3,9 +3,9 @@
 const { describe, before, beforeEach, after, afterEach, it } = require( "mocha" );
 const Should = require( "should" );
 
-const { generateShell, generateNode } = require( "./utilities/mockups" );
+const { generateShell, generateNode } = require( "../tools" );
 
-const Log = require( "../../lib/log" );
+const Log = require( "../../../lib/log" );
 
 
 

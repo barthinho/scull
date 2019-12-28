@@ -2,8 +2,8 @@
 
 const MemDown = require( "memdown" );
 
-const Shell = require( "../../../" );
-const Node = require( "../../../lib/node" );
+const Shell = require( "../../" );
+const Node = require( "../../lib/node" );
 
 let nextPort = 9999;
 let outputOnStdErr = false;
@@ -146,9 +146,84 @@ function hasOutputOnStdError() {
 	return Boolean( outputOnStdErr );
 }
 
+/**
+ * Starts cluster of nodes waiting for its first leader election.
+ *
+ * @param {string[]} peers lists multiaddr-formatted addresses of nodes to start
+ * @param {string[]} dontStart lists peers' addresses not to be started initially
+ * @param {object} options custom options to use on every created node of cluster
+ * @returns {Promise<Node[]>} promises all nodes (with some/all of them started)
+ */
+function startCluster( peers, dontStart = [], options = {} ) {
+	const nodes = peers.map( address => new Shell( address, Object.assign( {
+		db: MemDown(),
+		peers: peers.filter( addr => addr !== address )
+	}, options ) ) );
+
+	return Promise.all( nodes.map( node => {
+		if ( dontStart.findIndex( id => id === node.id.id ) < 0 ) {
+			return node.start( true )
+		}
+	} ) )
+		.then( () => nodes );
+}
+
+/**
+ * Stops all provided nodes.
+ *
+ * @param {Array<Node>} nodes list of previously started nodes
+ * @returns {Promise} promises nodes stopped
+ */
+function stopCluster( nodes ) {
+	return Promise.all( nodes.map( node => node.stop() ) );
+}
+
+/**
+ * Picks current leader and some follower from provided nodes of a cluster.
+ *
+ * @param {Node[]} nodes nodes of a cluster
+ * @returns {{leader: Node, follower: Node}} leader and one follower of cluster of nodes
+ */
+function getLeaderAndFollower( nodes ) {
+	const leader = nodes.find( node => node.is( "leader" ) );
+	const follower = nodes.find( node => node.is( "follower" ) );
+
+	follower.should.not.be.undefined();
+	leader.should.not.be.undefined();
+	leader.should.not.equal( follower );
+
+	return { leader, follower };
+}
+
+/**
+ * Asynchronously iterates over provided collection invoking callback on every
+ * item.
+ *
+ * @param {Array} items collection of items
+ * @param {function(item:*, index:Number, items:Array):*} cb callback invoked per item
+ * @returns {Promise} promises iterated collection
+ */
+function asyncEach( items, cb ) {
+	return new Promise( ( resolve, reject ) => {
+		const write = ( current, stopAt ) => {
+			if ( current >= stopAt ) {
+				resolve( items );
+			} else {
+				Promise.resolve( cb( items[current], current, items ) )
+					.then( () => process.nextTick( write, current + 1, stopAt ) )
+					.catch( reject );
+			}
+		};
+
+		write( 0, items.length );
+	} );
+}
+
 
 module.exports = {
 	NodeMockUp,
 	generateAddress, generateShell, generateNode,
+	startCluster, stopCluster, getLeaderAndFollower,
 	hasOutputOnStdError, resetOutputOnStdError,
+	asyncEach,
 };
