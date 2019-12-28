@@ -1,1 +1,0 @@
-This folder is containing unit tests that have been used with original libskiff. Due to significant changes in current implementation they don't work and partially won't provide any useful testing anymore. Thus, they are disabled and kept for reference until replacements have been implemented.
