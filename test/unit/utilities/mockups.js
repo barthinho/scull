@@ -2,14 +2,15 @@
 
 const MemDown = require( "memdown" );
 
-const Shell = require( "../../" );
-const Node = require( "../../lib/node" );
+const Shell = require( "../../../" );
+const Node = require( "../../../lib/node" );
 
 let nextPort = 9999;
-
-
 let outputOnStdErr = false;
 
+/**
+ * Enable monitoring of stderr output.
+ */
 const _originalWriter = process.stderr.write;
 process.stderr.write = function( chunk ) {
 	if ( chunk instanceof Buffer ) {
@@ -37,7 +38,7 @@ class NodeMockUp extends Node {
 	 * @param {Shell} shell
 	 */
 	constructor( shell ) {
-		super( shell.id, shell.connections, shell.dispatcher, shell.db, shell.peers.bind( shell ), shell.options );
+		super( shell.id, shell.db, shell.options );
 	}
 }
 
@@ -73,30 +74,43 @@ function generateAddress() {
  * explicitly.
  *
  * @param {?function(shell:Shell, finished:function=):?Promise} processor
- * @param {function(error:Error=)|function(shell:Shell)} done
  * @param {object<string,*>} options
+ * @returns {Promise<(Shell|*)>} promises generated shell or result of processing it
  */
-function generateShell( processor, done, options = {} ) {
-	const shell = Shell( generateAddress(), Object.assign( {}, {
-		db: MemDown,
-	}, options ) );
+function generateShell( processor, options = {} ) {
+	const _options = typeof processor === "function" ? options : processor;
 
-	shell.start()
+	const shell = new Shell( generateAddress(), Object.assign( {}, {
+		db: MemDown(),
+	}, _options ) );
+
+	return shell.start()
 		.then( () => {
-			if ( !processor ) {
-				done( shell );
-			} else if ( processor.length > 1 ) {
-				processor( shell, () => {
-					shell.stop().then( () => done(), done );
-				} );
-			} else {
-				processor( shell )
-					.then( () => {
-						shell.stop().then( () => done, done );
-					}, error => {
-						shell.stop().then( () => done( error ), () => done( error ) );
-					} );
+			if ( typeof processor !== "function" ) {
+				return shell;
 			}
+
+			if ( processor.length > 1 ) {
+				return new Promise( ( resolve, reject ) => {
+					processor( shell, ( error, result ) => {
+						shell.stop()
+							.catch( error => console.error( "stopping node failed:", error ) )
+							.then( () => {
+								if ( error ) {
+									reject( error )
+								} else {
+									resolve( result );
+								}
+							} );
+					} );
+				} );
+			}
+
+			return processor( shell )
+				.finally( () => {
+					return shell.stop()
+						.catch( error => console.error( "stopping node failed:", error ) );
+				} );
 		} );
 }
 
