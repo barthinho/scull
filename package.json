@@ -5,11 +5,12 @@
   "main": "lib/shell.js",
   "scripts": {
     "lint": "eslint .",
-    "test": "mocha test/unit/**/*.js",
-    "resilience-basic": "mocha test/resilience/*.js --exclude **/*.plus.js",
-    "resilience-large": "cross-env NODE_COUNT=10 mocha test/resilience/*.js --exclude **/*.plus.js",
-    "resilience-plus": "mocha test/resilience/*.plus.js --exclude **/*.plus.js",
-    "coverage": "nyc mocha test/unit/**/*.js"
+    "test": "cross-env LOG_ERRORS=false mocha --recursive --ui tdd test/unit/**/*.spec.js",
+    "resilience-basic": "mocha test/resilience/*.spec.js",
+    "resilience-short-term": "cross-env DURATION_MINS=3 mocha test/resilience/*.spec.js",
+    "resilience-large": "cross-env NODES_COUNT=20 DURATION_MINS=3 mocha test/resilience/*.spec.js",
+    "resilience-long-term": "cross-env DURATION_MINS=360 NODES_COUNT=20 MEMORY=false ORDER=false mocha test/resilience/*.spec.js",
+    "coverage": "cross-env LOG_ERRORS=false nyc mocha test/unit/**/*.spec.js"
   },
   "repository": {
     "type": "git",
